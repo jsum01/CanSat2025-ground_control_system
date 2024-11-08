@@ -1,23 +1,22 @@
-import { StrictMode } from 'react'
-import ReactDOM from 'react-dom'
-import App from 'App'
-import * as serviceWorker from './serviceWorker'
-import { BrowserRouter } from 'react-router-dom'
-import { HelmetProvider } from "react-helmet-async"
-// provider
-import AppProvider from 'modules'
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
+import AppProvider from './modules';
+import App from './App';
 
-ReactDOM.render(
-	<StrictMode>
-		<BrowserRouter>
-			<AppProvider>
-				<HelmetProvider>
-					<App />
-				</HelmetProvider>
-			</AppProvider>
-		</BrowserRouter>
-	</StrictMode>, 
-	document.getElementById('root')
+const root = ReactDOM.createRoot(
+  document.getElementById('root') as HTMLElement
 );
 
-serviceWorker.unregister();
+root.render(
+  <React.StrictMode>
+    <BrowserRouter>
+      <AppProvider>
+        <HelmetProvider>
+          <App />
+        </HelmetProvider>
+      </AppProvider>
+    </BrowserRouter>
+  </React.StrictMode>
+);

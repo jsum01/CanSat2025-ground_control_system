@@ -10,10 +10,10 @@ const App = () => {
 	return (<>
 		<Switch>
 			<Route path="/" component={HomePage} exact />
-			<Route path="*" component={NotFound} status={404} />
+			<Route path="*" component={NotFound} />
 		</Switch>
-		<Modal /> {/* Modal Position */}
-		<Snackbar /> {/* Snackbar Position */}
+		<Modal /> 
+		<Snackbar />
 	</>);
 }
 

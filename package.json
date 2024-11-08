@@ -1,28 +1,41 @@
 {
-  "name": "simple-react-ts-template",
-  "description": "react typescript template",
+  "name": "cansat-2025-gcs",
+  "description": "cansat 2025 GCS",
   "version": "1.0.0",
   "private": false,
+  "main": "public/electron.js",
+  "homepage": ".",
+  "scripts": {
+    "start": "cross-env NODE_OPTIONS=--openssl-legacy-provider BROWSER=none react-scripts start",
+    "electron": "electron .",
+    "electron:window": "SET ELECTRON_START_URL=http://localhost:3000 && yarn electron",
+    "electron:xos": "ELECTRON_START_URL=http://localhost:3000 yarn electron",
+    "prebuild": "react-scripts test --watchAll=false",
+    "electron-dev": "concurrently \"NODE_OPTIONS=--openssl-legacy-provider BROWSER=none HOST=127.0.0.1 yarn start\" \"wait-on http://localhost:3000 && ELECTRON_START_URL=http://localhost:3000 electron .\"",
+    "build": "react-scripts build",
+    "deploy:xos": "electron-builder --mac",
+    "deploy:win32": "electron-builder --win --ia32",
+    "deploy:win64": "electron-builder --win --x64",
+    "electron-pack": "electron-builder -c.extraMetadata.main=build/electron.js",
+    "deploy:win": "yarn deploy:win32 && yarn deploy:win64",
+    "test": "react-scripts test"
+  },
   "dependencies": {
     "@types/node": "^12.0.0",
-    "@types/react": "^17.0.0",
-    "@types/react-dom": "^16.9.8",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
     "@types/react-router-dom": "^5.1.5",
     "@types/styled-components": "^5.1.7",
+    "electron-is-dev": "^3.0.1",
     "immer": "^8.0.0",
-    "react": "^17.0.1",
-    "react-dom": "^17.0.1",
-    "react-helmet-async": "^1.0.6",
+    "postcss": "8.4.31",
+    "postcss-safe-parser": "6.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-helmet-async": "^2.0.5",
     "react-router-dom": "^5.2.0",
     "styled-components": "^5.2.1",
     "typescript": "^4.1.3"
-  },
-  "scripts": {
-    "start": "react-scripts start",
-    "prebuild": "react-scripts test --watchAll=false",
-    "build": "react-scripts build",
-    "postbuild": "cp -r build/* ../backend/app/client",
-    "test": "react-scripts test"
   },
   "eslintConfig": {
     "extends": [
@@ -47,7 +60,12 @@
     "@testing-library/react": "^11.1.0",
     "@testing-library/user-event": "^12.1.10",
     "@types/jest": "^26.0.15",
-    "react-scripts": "4.0.1"
+    "concurrently": "^9.1.0",
+    "cross-env": "^7.0.3",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
+    "react-scripts": "5.0.1",
+    "wait-on": "^8.0.1"
   },
-  "proxy": "http://localhost:5000"
+  "proxy": "http://localhost:3000"
 }
