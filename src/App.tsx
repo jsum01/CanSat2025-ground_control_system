@@ -1,11 +1,11 @@
-import TeamSammard from 'component/TeamSammard';
+import Main from 'component/Main';
 import { Switch, Route, Router } from 'react-router-dom'
 
 const App = () => {
 	return (<>
 		<Switch>
 			<Route path="/" exact>
-				<TeamSammard />
+				<Main />
 			</Route>
 		</Switch>
 	</>);

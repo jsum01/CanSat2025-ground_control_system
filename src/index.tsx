@@ -9,11 +9,9 @@ const root = ReactDOM.createRoot(
 );
 
 root.render(
-  <React.StrictMode>
     <BrowserRouter>
         <HelmetProvider>
           <App />
         </HelmetProvider>
     </BrowserRouter>
-  </React.StrictMode>
 );
