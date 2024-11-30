@@ -200,13 +200,13 @@ export const Telemetry: React.FC<TelemetryProps> = ({
       {viewMode === "charts" ? (
         <div className="grid grid-cols-4 grid-rows-2 gap-4 w-full h-full">
           {[
-            { id: "altitudeGraph", title: "Attitude vs Time Graph" },
-            { id: "temperatureGraph", title: "Temperature vs Time Graph" },
-            { id: "voltageGraph", title: "Voltage vs Time Graph" },
-            { id: "pressureGraph", title: "Pressure vs Time Graph" },
-            { id: "accelGraph", title: "ACCEL_R, ACCEL_P, ACCEL_Y vs Time Graph" },
-            { id: "magGraph", title: "MAG_R, MAG_P, MAG_Y vs Time Graph" },
-            { id: "gyroGraph", title: "GYRO_R, GYRO_P, GYRO_Y vs Time Graph" },
+            { id: "altitudeGraph", title: "Attitude" },
+            { id: "temperatureGraph", title: "Temperature" },
+            { id: "voltageGraph", title: "Voltage" },
+            { id: "pressureGraph", title: "Pressure" },
+            { id: "accelGraph", title: "ACCEL_R, ACCEL_P, ACCEL_Y" },
+            { id: "magGraph", title: "MAG_R, MAG_P, MAG_Y" },
+            { id: "gyroGraph", title: "GYRO_R, GYRO_P, GYRO_Y" },
           ].map((graph) => (
             <div
               key={graph.id}
