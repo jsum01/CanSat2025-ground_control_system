@@ -1,204 +1,164 @@
-import React, { useEffect, useRef } from 'react';
-import { Chart } from 'chart.js/auto';
-import './Main.css';
-import logo from "../static/images/cosmoLink.jpeg"
+import React, { useState } from 'react';
+import logo from "../static/images/cosmoLink.jpeg";
+import { Telemetry } from './Telemetry';
+import { CmdEcho } from './CmdEcho';
+import { TelemetryData } from '../types/mission';
 
-const Main: React.FC = () => {
-  const attitudeChartRef = useRef<Chart | null>(null);
-  const temperatureChartRef = useRef<Chart | null>(null);
-  const voltageChartRef = useRef<Chart | null>(null);
-  const altitudeChartRef = useRef<Chart | null>(null);
+const Main = () => {
+  const [activeTab, setActiveTab] = useState<'telemetry' | 'cmdecho'>('telemetry');
+  const [viewMode, setViewMode] = useState<'charts' | 'table'>('charts');
+  const [telemetryData] = useState<TelemetryData[]>([
+    {
+      TEAM_ID: '3167',
+      MISSION_TIME: '12:45:03.00',
+      PACKET_COUNT: '42',
+      PACKET_TYPE: 'C',
+      MODE: 'F',
+      TP_RELEASED: 'N',
+      ALTITUDE: '300.2',
+      TEMP: '25.6',
+      VOLTAGE: '3.7',
+      PRESSURE: '6.9',
+      AUTO_GYRO_ROTATION_RATE: '6.8',
+      GPS_TIME: '12:45:03.00',
+      GPS_LATITUDE: '37.123456',
+      GPS_LONGITUDE: '127.123456',
+      GPS_ALTITUDE: '300.2',
+      GPS_SATS: '8',
+      GYRO_R: '0.1',
+      GYRO_P: '0.2',
+      GYRO_Y: '0.3',
+      ACCEL_R: '0.01',
+      ACCEL_P: '0.02',
+      ACCEL_Y: '0.03',
+      MAG_R: '120',
+      MAG_P: '130',
+      MAG_Y: '140',
+      SOFTWARE_STATE: 'LAUNCH_PAD',
+      CMD_ECHO: 'CXON'
+    },
+    // ... 더 많은 데이터
+  ]);
 
   const today = new Date();
-  let hours = today.getHours(); // 시
-  let minutes = today.getMinutes();  // 분
-  let seconds = today.getSeconds();  // 초
-  let milliseconds = today.getMilliseconds(); // 밀리초
-  const time = `KST ${hours}:${minutes}:${seconds}.${milliseconds}`
-  useEffect(() => {
-    const timeLabels = Array.from({ length: 50 }, (_, i) => i.toString());
-    
-    const createChart = (
-      canvasId: string,
-      data: number[],
-      color: string
-    ): Chart | null => {
-      const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
-      if (!canvas) return null;
+  const time = `KST ${today.getHours()}:${today.getMinutes()}:${today.getSeconds()}.${today.getMilliseconds()}`;
 
-      return new Chart(canvas, {
-        type: 'line',
-        data: {
-          labels: timeLabels,
-          datasets: [{
-            data: data,
-            borderColor: color,
-            borderWidth: 2,
-            tension: 0,
-            pointRadius: 0,
-            fill: false
-          }],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          animation: false,
-          plugins: {
-            legend: {
-              display: false
-            }
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              grid: {
-                color: '#E5E5E5'
-              },
-              ticks: {
-                font: {
-                  size: 10
-                }
-              }
-            },
-            x: {
-              grid: {
-                color: '#E5E5E5'
-              },
-              ticks: {
-                font: {
-                  size: 10
-                },
-                maxTicksLimit: 10
-              }
-            }
-          }
-        },
-      });
-    };
-
-    // 정적 데이터
-    const attitudeData = Array.from({ length: 50 }, (_, i) => i * 2);
-    const temperatureData = Array.from({ length: 50 }, (_, i) => 20 + Math.sin(i / 5) * 5);
-    const voltageData = Array.from({ length: 50 }, (_, i) => 12 + (i / 10));
-    const altitudeData = Array.from({ length: 50 }, (_, i) => 100 + i * 3);
-
-    // 차트 생성
-    attitudeChartRef.current = createChart('attitudeGraph', attitudeData, '#0000FF');
-    temperatureChartRef.current = createChart('temperatureGraph', temperatureData, '#FF0000');
-    voltageChartRef.current = createChart('voltageGraph', voltageData, '#00FF00');
-    altitudeChartRef.current = createChart('altitudeGraph', altitudeData, '#800080');
-
-    return () => {
-      attitudeChartRef.current?.destroy();
-      temperatureChartRef.current?.destroy();
-      voltageChartRef.current?.destroy();
-      altitudeChartRef.current?.destroy();
-    };
-  }, []);
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'telemetry':
+        return <Telemetry viewMode={viewMode} missionData={telemetryData} />;
+      case 'cmdecho':
+        return <CmdEcho />;
+      default:
+        return null;
+    }
+  };
 
   return (
-    <div className="app-container">
-      <header className="app-header">
-        <img src={logo} alt="SAMMARD" className="team-logo" />
-        <h1 className="team-title">TEAM COSMOLINC 3.0</h1>
-        <p className="team-id">TEAM ID:안나왔잖아</p>
+    <div className="flex flex-col h-screen bg-gray-200 font-sans overflow-hidden">
+      {/* Header */}
+      <header className="flex items-center px-8 py-2 bg-white border-b border-gray-300 h-[70px]">
+        <img src={logo} alt="SAMMARD" className="w-[50px] h-[50px] mr-8" />
+        <h1 className="text-blue-900 text-3xl m-0 flex-grow text-center">TEAM COSMOLINK</h1>
+        <p className="text-blue-900 text-lg m-0">TEAM ID:3167</p>
       </header>
 
-      <div className="status-bar">
-        <div className="mission-info">
-          <span className="info-label">MISSION TIME</span>
-          <span className="info-value">{time}</span>
+      {/* Status Bar */}
+      <div className="flex justify-between items-center px-8 py-2 bg-gray-100 border-b border-gray-300 h-[50px]">
+        <div className="flex flex-row justify-center items-center gap-4">
+          <span>MISSION TIME</span>
+          <span>{time}</span>
         </div>
         
-        <div className="control-buttons">
-        <button className="control-btn">SET UTC TIME</button>
-        <button className="control-btn">CALIBRATE</button>
-          <button className="control-btn">START TELEMETRY</button>
-          <button className="control-btn">STOP TELEMETRY</button>
+        <div className="flex gap-4">
+          <button className="px-4 py-2 rounded bg-blue-900 text-white font-bold hover:bg-blue-800">CALIBRATE</button>
+          <button className="px-4 py-2 rounded bg-blue-900 text-white font-bold hover:bg-blue-800">SET UTC TIME</button>
+          <button className="px-4 py-2 rounded bg-blue-900 text-white font-bold hover:bg-blue-800">START TELEMETRY</button>
+          <button className="px-4 py-2 rounded bg-blue-900 text-white font-bold hover:bg-blue-800">STOP TELEMETRY</button>
         </div>
 
-        <div className="packet-info">
-          <span className="info-label">PACKET COUNT</span>
-          <span className="info-value">:   null</span>
+        <div className="flex items-center gap-2">
+          <span>PACKET COUNT</span>
+          <span>: 31</span>
         </div>
       </div>
 
-      <div className="main-content">
-        <div className="content-tabs">
-          <div className="tab active">CONTAINER</div>
-          <div className="tab">PAYLOAD</div>
+      {/* Main Content */}
+      <div className="flex-1 p-4 flex flex-col min-h-0">
+        {/* Tabs */}
+        <div className="flex gap-0.5 mb-2">
+          {[
+            { id: 'telemetry', label: 'TELEMETRY' },
+            { id: 'cmdecho', label: 'CMD ECHO' },
+          ].map((tab) => (
+            <div 
+              key={tab.id}
+              className={`px-8 py-2 bg-white border-b-[3px] cursor-pointer ${
+                activeTab === tab.id ? 'border-blue-900 text-blue-900 font-bold' : 'border-transparent'
+              }`}
+              onClick={() => setActiveTab(tab.id as 'telemetry' | 'cmdecho')}
+            >
+              {tab.label}
+            </div>
+          ))}
         </div>
 
-        <div className="content-area">
-          <div className="graphs-container">
-            <div className="graph-grid">
-              <div className="graph-item">
-                <h3>Attitude vs Time Graph</h3>
-                <div className="canvas-container">
-                  <canvas id="attitudeGraph"></canvas>
-                </div>
-              </div>
-              <div className="graph-item">
-                <h3>Temperature vs Time Graph</h3>
-                <div className="canvas-container">
-                  <canvas id="temperatureGraph"></canvas>
-                </div>
-              </div>
-              <div className="graph-item">
-                <h3>Voltage vs Time Graph</h3>
-                <div className="canvas-container">
-                  <canvas id="voltageGraph"></canvas>
-                </div>
-              </div>
-              <div className="graph-item">
-                <h3>GPS Altitude vs Time Graph</h3>
-                <div className="canvas-container">
-                  <canvas id="altitudeGraph"></canvas>
-                </div>
-              </div>
-            </div>
+        {/* Content Area */}
+        <div className="flex gap-4 flex-1 min-h-0">
+          {/* Main View Container */}
+          <div className="flex-1 bg-white rounded-lg shadow-md p-4 flex min-h-0">
+          {renderTabContent()}
           </div>
 
-          <div className="side-panel">
-            <button className="panel-btn active">TABLE</button>
-            <button className="panel-btn">CHARTS</button>
-            
-            <div className="simulation-section">
-              <div className="simulation-container">
-                <p>SIMULATION MODE</p>
-                <p style={{fontWeight:'bold'}}>DISABLED</p>
-                <div className="simulation-buttons">
-                  <button className="sim-btn">ENABLE</button>
-                  <button className="sim-btn">ACTIVATE</button>
-                  <button className="sim-btn">DISABLE</button>
+          {/* Side Panel */}
+          <div className="w-[250px] bg-white p-4 rounded-lg shadow-md flex flex-col">
+            {activeTab != 'cmdecho' && (
+              <>
+            <button 
+              className={`w-full p-2 mb-2 rounded cursor-pointer ${viewMode === 'charts' ? 'bg-blue-900 text-white' : 'bg-gray-100'}`}
+              onClick={() => setViewMode('charts')}
+            >
+              CHARTS
+            </button>
+            <button 
+              className={`w-full p-2 mb-2 rounded cursor-pointer ${viewMode === 'table' ? 'bg-blue-900 text-white' : 'bg-gray-100'}`}
+              onClick={() => setViewMode('table')}
+            >
+              TABLE
+            </button>
+            </>
+            )}
+            <div className="mt-2">
+              <div className="flex flex-col justify-center items-center bg-gray-100 p-4 gap-2">
+                <p className="m-0">SIMULATION MODE</p>
+                <p className="font-bold m-0">DISABLED</p>
+                <div className="flex gap-1">
+                  <button className="flex-1 p-2 rounded bg-gray-100 cursor-pointer text-sm">
+                    ENABLE
+                  </button>
+                  <button className="flex-1 p-2 rounded bg-gray-100 cursor-pointer text-sm">
+                    ACTIVATE
+                  </button>
+                  <button className="flex-1 p-2 rounded bg-blue-900 text-white cursor-pointer text-sm">
+                    DISABLE
+                  </button>
                 </div>
               </div>
               
-              <div className="gps-info">
-                <div className="info-row">
-                  <span>Software State:</span>
-                  <span>null</span>
-                </div>
-                <div className="info-row">
-                  <span>GPS TIME:</span>
-                  <span>null</span>
-                </div>
-                <div className="info-row">
-                  <span>GPS LATITUDE:</span>
-                  <span>null</span>
-                </div>
-                <div className="info-row">
-                  <span>GPS LONGITUDE:</span>
-                  <span>null</span>
-                </div>
-                <div className="info-row">
-                  <span>GPS ALTITUDE:</span>
-                  <span>null</span>
-                </div>
-                <div className="info-row">
-                  <span>GPS STATS:</span>
-                  <span>null</span>
-                </div>
+              <div className="text-sm p-2">
+                {[
+                  ['Software State:', 'null'],
+                  ['GPS TIME:', 'null'],
+                  ['GPS LATITUDE:', 'null'],
+                  ['GPS LONGITUDE:', 'null'],
+                  ['GPS ALTITUDE:', 'null'],
+                  ['GPS STATS:', 'null'],
+                ].map(([label, value]) => (
+                  <div key={label} className="flex justify-between mb-2 pb-2 border-b border-gray-200">
+                    <span className="text-blue-900 font-bold">{label}</span>
+                    <span>{value}</span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>

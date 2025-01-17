@@ -1,0 +1,30 @@
+// types/mission.ts
+export interface TelemetryData {
+  TEAM_ID: string;
+  MISSION_TIME: string;
+  PACKET_COUNT: string;
+  PACKET_TYPE: string;
+  MODE: string;
+  TP_RELEASED: string;
+  ALTITUDE: string;
+  TEMP: string;
+  VOLTAGE: string;
+  PRESSURE: string;
+  AUTO_GYRO_ROTATION_RATE: string;
+  GPS_TIME: string;
+  GPS_LATITUDE: string;
+  GPS_LONGITUDE: string;
+  GPS_ALTITUDE: string;
+  GPS_SATS: string;
+  GYRO_R: string;
+  GYRO_P: string;
+  GYRO_Y: string;
+  ACCEL_R: string;
+  ACCEL_P: string;
+  ACCEL_Y: string;
+  MAG_R: string;
+  MAG_P: string;
+  MAG_Y: string;
+  SOFTWARE_STATE: string;
+  CMD_ECHO: string;
+}

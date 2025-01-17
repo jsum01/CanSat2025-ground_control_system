@@ -1,3 +1,6 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 /* SpoqaHanSans Font */
 @font-face {
 	font-family: 'SpoqaHanSans';
