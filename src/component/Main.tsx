@@ -9,35 +9,33 @@ const Main = () => {
   const [viewMode, setViewMode] = useState<'charts' | 'table'>('charts');
   const [telemetryData] = useState<TelemetryData[]>([
     {
-      TEAM_ID: '3167',
-      MISSION_TIME: '12:45:03.00',
-      PACKET_COUNT: '42',
-      PACKET_TYPE: 'C',
-      MODE: 'F',
-      TP_RELEASED: 'N',
-      ALTITUDE: '300.2',
-      TEMP: '25.6',
-      VOLTAGE: '3.7',
-      PRESSURE: '6.9',
-      AUTO_GYRO_ROTATION_RATE: '6.8',
-      GPS_TIME: '12:45:03.00',
-      GPS_LATITUDE: '37.123456',
-      GPS_LONGITUDE: '127.123456',
-      GPS_ALTITUDE: '300.2',
-      GPS_SATS: '8',
-      GYRO_R: '0.1',
+      TEAM_ID: '3167',                    // 4자리 팀 ID
+      MISSION_TIME: '12:45:03',           // hh:mm:ss 형식
+      PACKET_COUNT: '42',                 // 전송된 패킷 수
+      MODE: 'F',                          // Flight 모드
+      STATE: 'LAUNCH_PAD',                // 초기 상태
+      ALTITUDE: '300.2',                  // 미터 단위, 0.1m 해상도
+      TEMPERATURE: '25.6',                // 섭씨, 0.1도 해상도
+      PRESSURE: '101.3',                  // kPa, 0.1kPa 해상도
+      VOLTAGE: '3.7',                     // V, 0.1V 해상도
+      GYRO_R: '0.1',                      // degrees/second
       GYRO_P: '0.2',
       GYRO_Y: '0.3',
-      ACCEL_R: '0.01',
+      ACCEL_R: '0.01',                    // degrees/second^2
       ACCEL_P: '0.02',
       ACCEL_Y: '0.03',
-      MAG_R: '120',
+      MAG_R: '120',                       // gauss
       MAG_P: '130',
       MAG_Y: '140',
-      SOFTWARE_STATE: 'LAUNCH_PAD',
-      CMD_ECHO: 'CXON'
-    },
-    // ... 더 많은 데이터
+      AUTO_GYRO_ROTATION_RATE: '6.8',     // degrees/second, 1도 해상도
+      GPS_TIME: '12:45:03',               // UTC 시간
+      GPS_ALTITUDE: '300.2',              // 미터, 0.1m 해상도
+      GPS_LATITUDE: '37.1234',            // 도, 0.0001도 해상도
+      GPS_LONGITUDE: '-84.4268',          // 도, 0.0001도 해상도
+      GPS_SATS: '8',                      // 위성 수 (정수)
+      CMD_ECHO: 'CXON',                   // 마지막 수신된 명령어
+      OPTIONAL_DATA: ''                    // 선택적 추가 데이터
+    }
   ]);
 
   const today = new Date();
