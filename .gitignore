@@ -398,3 +398,5 @@ $RECYCLE.BIN/
 
 
 # Custom Ignore files -------------
+
+yarn.lock
