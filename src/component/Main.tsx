@@ -6,6 +6,18 @@ import { TelemetryData } from "../types/mission";
 const { ipcRenderer } = window.require("electron");
 
 const Main = () => {
+  const CMD_TEL_ON = "CMD,3167,CX,ON";
+  const CMD_TEL_OFF = "CMD,3167,CX,OFF";
+  const CMD_ST_GPS = "CMD,3167,ST,GPS";
+  const CMD_ST_UTC = "CMD,3167,ST,";
+  const CMD_SIM_ACTIVATE = "CMD,3167,SIM,ACTIVATE";
+  const CMD_SIM_ENABLE = "CMD,3167,SIM,ENABLE";
+  const CMD_SIM_DISABLE = "CMD,3167,SIM,DISABLE";
+  const CMD_SIMP = "CMD,3167,SIMP,";
+  const CMD_CAL = "CMD,3167,CAL";
+  const CMD_MEC_ON = "CMD,3167,MEC,UC,ON";
+  const CMD_MEC_OFF = "CMD,3167,MEC,UC,OFF";
+
   const [activeTab, setActiveTab] = useState<"telemetry" | "cmdecho">(
     "telemetry"
   );
@@ -13,6 +25,9 @@ const Main = () => {
   const [serialPorts, setSerialPorts] = useState<Array<{ path: string }>>([]);
   const [selectedPort, setSelectedPort] = useState<string>("");
   const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [isMec, setIsMec] = useState<boolean>(false);
+  const [isToggleTime, setIsToggleTime] = useState<boolean>(false);
+  const [UTCTime, setUTCTime] = useState<string>("");
   const [telemetryData, setTelemetryData] = useState<TelemetryData[]>([
     {
       TEAM_ID: "3167",
@@ -44,33 +59,124 @@ const Main = () => {
     },
   ]);
 
+  // 데이터 처리 함수 추가
+  const handleSerialData = (_event: any, data: string) => {
+    try {
+      // 캐리지 리턴 제거 및 데이터 분리
+      const values = data
+        .trim()
+        .split(",")
+        .map((value) => value.trim());
+
+      // 데이터 검증을 위한 기본 체크
+      if (values.length < 25) {
+        // OPTIONAL_DATA를 제외한 최소 필수 필드 수
+        console.warn("Insufficient number of fields in telemetry data");
+        return;
+      }
+
+      // MODE 필드 검증 ('F' 또는 'S'만 허용)
+      if (values[3] !== "F" && values[3] !== "S") {
+        console.warn(`Invalid MODE value: ${values[3]}`);
+        return;
+      }
+
+      // STATE 필드 검증
+      const validStates = [
+        "LAUNCH_PAD",
+        "ASCENT",
+        "APOGEE",
+        "DESCENT",
+        "PROBE_RELEASE",
+        "LANDED",
+      ];
+      if (!validStates.includes(values[4])) {
+        console.warn(`Invalid STATE value: ${values[4]}`);
+        return;
+      }
+
+      const parsedData: TelemetryData = {
+        TEAM_ID: values[0],
+        MISSION_TIME: values[1],
+        PACKET_COUNT: values[2],
+        MODE: values[3] as "F" | "S",
+        STATE: values[4] as TelemetryData["STATE"],
+        ALTITUDE: values[5],
+        TEMPERATURE: values[6],
+        PRESSURE: values[7],
+        VOLTAGE: values[8],
+        GYRO_R: values[9],
+        GYRO_P: values[10],
+        GYRO_Y: values[11],
+        ACCEL_R: values[12],
+        ACCEL_P: values[13],
+        ACCEL_Y: values[14],
+        MAG_R: values[15],
+        MAG_P: values[16],
+        MAG_Y: values[17],
+        AUTO_GYRO_ROTATION_RATE: values[18],
+        GPS_TIME: values[19],
+        GPS_ALTITUDE: values[20],
+        GPS_LATITUDE: values[21],
+        GPS_LONGITUDE: values[22],
+        GPS_SATS: values[23],
+        CMD_ECHO: values[24],
+        OPTIONAL_DATA: values[25], // 선택적 필드
+      };
+
+      // 필수 필드 검증
+      if (!parsedData.TEAM_ID || !parsedData.MISSION_TIME) {
+        console.warn("Missing required fields (TEAM_ID or MISSION_TIME)");
+        return;
+      }
+
+      // 시간 형식 검증 (hh:mm:ss)
+      const timeRegex = /^([0-1][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$/;
+      if (!timeRegex.test(parsedData.MISSION_TIME)) {
+        console.warn(`Invalid MISSION_TIME format: ${parsedData.MISSION_TIME}`);
+        return;
+      }
+
+      // 유효한 데이터면 상태를 업데이트
+      setTelemetryData((prev) => [...prev, parsedData]);
+    } catch (error) {
+      console.error("Failed to parse telemetry data:", error);
+      console.log("Raw data:", data);
+    }
+  };
+
+  // 에러 처리 함수 추가
+  const handleSerialError = (_event: any, error: string) => {
+    console.error("Serial error:", error);
+    alert(`Serial Error: ${error}`);
+    setIsConnected(false);
+    setSelectedPort("");
+  };
+
   useEffect(() => {
     const getPorts = async () => {
       try {
+        // 먼저 현재 포트 상태를 확인
+        const portStatus = await ipcRenderer.invoke("check-port-status");
+
+        if (portStatus.isConnected) {
+          // 이미 연결된 포트가 있다면 해당 정보로 상태 업데이트
+          setIsConnected(true);
+          setSelectedPort(portStatus.currentPort);
+        }
+
+        // 포트 목록은 항상 가져옴 (연결 해제 시 필요)
         const ports = await ipcRenderer.invoke("get-ports");
         setSerialPorts(ports);
       } catch (error) {
-        console.error("Failed to get ports:", error);
+        console.error("Failed to get port status:", error);
       }
     };
 
-    ipcRenderer.on("serial-data", (event, data) => {
-      try {
-        const parsed = typeof data === "string" ? JSON.parse(data) : data;
-        setTelemetryData((prev) => [...prev, parsed]);
-      } catch (error) {
-        console.error("Serial data parse error:", error, data);
-      }
-    });
-
-    ipcRenderer.on("serial-error", (event, error) => {
-      console.error("Serial error:", error);
-      alert(`Serial Error: ${error}`);
-      setIsConnected(false);
-      setSelectedPort("");
-    });
-
     getPorts();
+
+    ipcRenderer.on("serial-data", handleSerialData);
+    ipcRenderer.on("serial-error", handleSerialError);
 
     return () => {
       ipcRenderer.removeAllListeners("serial-data");
@@ -79,18 +185,115 @@ const Main = () => {
   }, []);
 
   const handleConnect = async () => {
+    // 연결 시도
     if (!isConnected && selectedPort) {
-      const result = await ipcRenderer.invoke("connect-port", selectedPort);
-      if (result.success) {
-        setIsConnected(true);
-      } else {
-        alert(`연결 실패: ${result.error}`);
+      try {
+        // 먼저 현재 포트 상태를 확인합니다
+        const portStatus = await ipcRenderer.invoke("check-port-status");
+
+        // 이미 다른 포트가 연결되어 있는 경우 처리
+        if (portStatus.isConnected && portStatus.currentPort !== selectedPort) {
+          alert(
+            `다른 포트(${portStatus.currentPort})가 이미 연결되어 있습니다.`
+          );
+          // UI 상태를 실제 연결 상태와 동기화
+          setIsConnected(true);
+          setSelectedPort(portStatus.currentPort);
+          return;
+        }
+
+        // 새로운 연결 시도
+        const result = await ipcRenderer.invoke("connect-port", selectedPort);
+        if (result.success) {
+          setIsConnected(true);
+          setSelectedPort(selectedPort);
+        } else {
+          alert(`연결 실패: ${result.error}`);
+        }
+      } catch (error) {
+        console.error("Connection error:", error);
+        alert("연결 중 오류가 발생했습니다.");
       }
-    } else {
-      const result = await ipcRenderer.invoke("disconnect-port");
-      if (result.success) {
-        setIsConnected(false);
-        setSelectedPort("");
+    }
+    // 연결 해제
+    else if (isConnected) {
+      try {
+        const result = await ipcRenderer.invoke("disconnect-port");
+        if (result.success) {
+          setIsConnected(false);
+          setSelectedPort("");
+
+          // 포트 목록 다시 가져오기
+          const ports = await ipcRenderer.invoke("get-ports");
+          setSerialPorts(ports);
+        } else {
+          alert("연결 해제 실패");
+        }
+      } catch (error) {
+        console.error("Disconnection error:", error);
+        alert("연결 해제 중 오류가 발생했습니다.");
+      }
+    }
+  };
+
+  const handleCalToZero = async () => {
+    if (isConnected) {
+      try {
+        await ipcRenderer.invoke("send-data", CMD_CAL);
+      } catch (error) {
+        console.error("Failed to stop telemetry:", error);
+        alert("텔레메트리 중지 실패");
+      }
+    }
+  };
+
+  const handleToggleTime = async () => {
+    if (isConnected) {
+      setIsToggleTime(true);
+    }
+  };
+
+  const handleSetGPSTime = async () => {
+    if (isConnected) {
+      try {
+        await ipcRenderer.invoke("send-data", CMD_ST_GPS);
+        setIsToggleTime(false);
+      } catch (error) {
+        console.error("Failed to stop telemetry:", error);
+        alert("텔레메트리 중지 실패");
+      }
+    }
+  };
+
+  const handleSetUTCTime = async (e: React.FormEvent) => {
+    if (isConnected) {
+      try {
+        e.preventDefault();
+        if (UTCTime.trim()) {
+          await ipcRenderer.invoke("send-data", CMD_ST_UTC + UTCTime);
+          setUTCTime("");
+          setIsToggleTime(false);
+        }
+      } catch (error) {
+        console.error("Failed to stop telemetry:", error);
+        alert("텔레메트리 중지 실패");
+      }
+    }
+  };
+
+  const handleToggleMEC = async () => {
+    if (isConnected) {
+      try {
+        if (!isMec) {
+          await ipcRenderer.invoke("send-data", CMD_MEC_ON);
+          setIsMec(true);
+        } else {
+          await ipcRenderer.invoke("send-data", CMD_MEC_OFF);
+          setIsMec(false);
+        }
+      } catch (error) {
+        console.error("Failed to stop telemetry:", error);
+        alert("텔레메트리 중지 실패");
       }
     }
   };
@@ -98,7 +301,7 @@ const Main = () => {
   const handleStartTelemetry = async () => {
     if (isConnected) {
       try {
-        await ipcRenderer.invoke("send-data", "CMD,3167,CX,ON");
+        await ipcRenderer.invoke("send-data", CMD_TEL_ON);
       } catch (error) {
         console.error("Failed to start telemetry:", error);
         alert("텔레메트리 시작 실패");
@@ -111,7 +314,7 @@ const Main = () => {
   const handleStopTelemetry = async () => {
     if (isConnected) {
       try {
-        await ipcRenderer.invoke("send-data", "STOP");
+        await ipcRenderer.invoke("send-data", CMD_TEL_OFF);
       } catch (error) {
         console.error("Failed to stop telemetry:", error);
         alert("텔레메트리 중지 실패");
@@ -120,7 +323,9 @@ const Main = () => {
   };
 
   const today = new Date();
-  const time = `KST ${today.getHours()}:${today.getMinutes()}:${today.getSeconds()}.${today.getMilliseconds()}`;
+  const time = `KST ${String(today.getHours()).padStart(2, "0")}:${String(
+    today.getMinutes()
+  ).padStart(2, "0")}:${String(today.getSeconds()).padStart(2, "0")}`;
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -173,23 +378,51 @@ const Main = () => {
         </div>
 
         <div className="flex gap-4">
+          {!isToggleTime && (
+            <button
+              className="px-4 py-2 rounded bg-blue-900 text-white font-bold hover:bg-blue-800"
+              disabled={!isConnected}
+              onClick={handleToggleTime}
+            >
+              SET TIME
+            </button>
+          )}
+
+          {isToggleTime && (
+            <div className="flex items-center gap-2">
+              <form onSubmit={handleSetUTCTime} className="flex-1">
+                <input
+                  type="text"
+                  onChange={(e) => setUTCTime(e.target.value)}
+                  value={UTCTime}
+                  placeholder="Enter UTC Time"
+                  className="w-full px-3 py-2 rounded border border-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-900 focus:border-transparent placeholder-gray-400 font-mono"
+                />
+              </form>
+              <button
+                className="px-4 py-2 rounded bg-blue-900 text-white font-bold hover:bg-blue-800 whitespace-nowrap transition-colors duration-200"
+                disabled={!isConnected}
+                onClick={handleSetGPSTime}
+              >
+                SET GPS TIME
+              </button>
+            </div>
+          )}
           <button
             className="px-4 py-2 rounded bg-blue-900 text-white font-bold hover:bg-blue-800"
             disabled={!isConnected}
-          >
-            SET UTC TIME
-          </button>
-          <button
-            className="px-4 py-2 rounded bg-blue-900 text-white font-bold hover:bg-blue-800"
-            disabled={!isConnected}
+            onClick={handleCalToZero}
           >
             CALIBRATE
           </button>
           <button
-            className="px-4 py-2 rounded bg-blue-900 text-white font-bold hover:bg-blue-800"
+            className={`px-4 py-1 rounded text-white font-bold hover:bg-blue-800 ${
+              isMec ? "bg-red-600 hover:bg-red-700" : "bg-blue-900"
+            }`}
             disabled={!isConnected}
+            onClick={handleToggleMEC}
           >
-            MEC ON
+            {isMec ? "MEC OFF" : "MEC ON"}
           </button>
           <button
             className="px-4 py-2 rounded bg-blue-900 text-white font-bold hover:bg-blue-800"
