@@ -1,44 +1,116 @@
-const path = require('path');
-const { app, BrowserWindow } = require('electron');
+const path = require("path");
+const { app, BrowserWindow, ipcMain } = require("electron");
+const { SerialPort } = require("serialport");
+const { ReadlineParser } = require("@serialport/parser-readline");
 
-// isDev 체크를 직접 구현
 const isDev = process.env.ELECTRON_START_URL ? true : false;
+let mainWindow = null;
+let port = null;
 
 function createWindow() {
-  const win = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1366,
     height: 768,
     webPreferences: {
       nodeIntegration: true,
-      contextIsolation: false
-    }
+      contextIsolation: false,
+      preload: path.join(__dirname, 'preload.js')
+    },
   });
 
-  // 개발 모드일 때는 환경변수의 URL을, 아닐 때는 빌드된 파일을 로드
-  win.loadURL(
+  mainWindow.loadURL(
     isDev
       ? process.env.ELECTRON_START_URL
-      : `file://${path.join(__dirname, '../build/index.html')}`
+      : `file://${path.join(__dirname, "../build/index.html")}`
   );
 
-  // 개발 모드일 때만 개발자 도구 열기
   if (isDev) {
-    win.webContents.openDevTools();
+    mainWindow.webContents.openDevTools();
   }
 }
 
-// Electron 앱이 준비되면 창 생성
+ipcMain.handle("get-ports", async () => {
+  try {
+    return await SerialPort.list();
+  } catch (error) {
+    console.error("Error listing ports:", error);
+    return [];
+  }
+});
+
+ipcMain.handle("connect-port", async (event, portPath) => {
+  try {
+    if (!portPath) throw new Error("포트를 선택해주세요");
+
+    port = new SerialPort({
+      path: portPath,
+      baudRate: 9600,
+    });
+
+    const parser = port.pipe(new ReadlineParser({ delimiter: "\r\n" }));
+
+    parser.on("data", (data) => {
+      mainWindow.webContents.send("serial-data", data);
+    });
+
+    port.on("error", (err) => {
+      mainWindow.webContents.send("serial-error", err.message);
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Connection error:", error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('disconnect-port', async () => {
+  if (port) {
+    return new Promise((resolve) => {
+      port.close((err) => {
+        // 에러가 있더라도 포트 객체 정리
+        port.removeAllListeners();
+        port = null;
+        resolve({ success: true });
+      });
+    });
+  }
+  return { success: true };
+});
+
+// main.js
+ipcMain.handle('send-data', async (event, data) => {
+  if (!port) return { success: false, error: 'Port not connected' };
+  
+  try {
+    console.log('Attempting to send:', data);
+    port.write(`${data}\r\n`, (err) => {
+      if (err) console.error('Write error:', err);
+      else console.log('Data sent successfully');
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('Send error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 app.whenReady().then(createWindow);
 
-// 모든 창이 닫히면 앱 종료
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
     app.quit();
   }
 });
 
-app.on('activate', () => {
+app.on("activate", () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
+  }
+});
+
+app.on("before-quit", async () => {
+  if (port) {
+    port.close();
   }
 });
