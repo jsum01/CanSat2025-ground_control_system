@@ -324,17 +324,17 @@ const Main = () => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       const text = await file.text();
-   
+
       // 파일 파싱 (#으로 시작하는 줄과 빈 줄 제외)
       const commands = text
         .split("\n")
         .filter((line) => line.trim() && !line.startsWith("#"))
         .map((line) => line.replace("$", "3167"));
-   
+
       setSimFile(commands);
       setHasValidSimFile(commands.length > 0);
     }
-   };
+  };
 
   // SIMP 명령 실행을 위한 인터벌 핸들러
   const startSimulation = async () => {
@@ -588,49 +588,55 @@ const Main = () => {
               </>
             )}
             <div className="mt-2">
-              <div className="flex gap-1">
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileUpload}
-                  className="hidden"
-                  accept=".txt"
-                />
-                <button
-                  className={`flex-1 p-2 rounded cursor-pointer text-sm ${
-                    simStatus === "ENABLED"
-                      ? "bg-blue-900 text-white"
-                      : "bg-gray-100"
-                  }`}
-                  onClick={handleSimEnable}
-                  disabled={!isConnected}
-                >
-                  ENABLE
-                </button>
-                <button
-                  className={`flex-1 p-2 rounded cursor-pointer text-sm ${
-                    simStatus === "ACTIVE"
-                      ? "bg-blue-900 text-white"
-                      : "bg-gray-100"
-                  }`}
-                  onClick={handleSimActivate}
-                  disabled={
-                    !isConnected || !hasValidSimFile || simStatus !== "ENABLED"
-                  }
-                >
-                  ACTIVATE
-                </button>
-                <button
-                  className={`flex-1 p-2 rounded cursor-pointer text-sm ${
-                    simStatus === "DISABLED"
-                      ? "bg-blue-900 text-white"
-                      : "bg-gray-100"
-                  }`}
-                  onClick={handleSimDisable}
-                  disabled={!isConnected}
-                >
-                  DISABLE
-                </button>
+              <div className="flex flex-col justify-center items-center bg-gray-100 p-4 gap-2">
+                <p className="m-0">SIMULATION MODE</p>
+                <p className="font-bold m-0">{simStatus}</p>
+                <div className="flex gap-1">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    accept=".txt"
+                  />
+                  <button
+                    className={`flex-1 p-2 rounded cursor-pointer text-sm ${
+                      simStatus === "ENABLED"
+                        ? "bg-blue-900 text-white"
+                        : "bg-gray-100"
+                    }`}
+                    onClick={handleSimEnable}
+                    disabled={!isConnected}
+                  >
+                    ENABLE
+                  </button>
+                  <button
+                    className={`flex-1 p-2 rounded cursor-pointer text-sm ${
+                      simStatus === "ACTIVE"
+                        ? "bg-blue-900 text-white"
+                        : "bg-gray-100"
+                    }`}
+                    onClick={handleSimActivate}
+                    disabled={
+                      !isConnected ||
+                      !hasValidSimFile ||
+                      simStatus !== "ENABLED"
+                    }
+                  >
+                    ACTIVATE
+                  </button>
+                  <button
+                    className={`flex-1 p-2 rounded cursor-pointer text-sm ${
+                      simStatus === "DISABLED"
+                        ? "bg-blue-900 text-white"
+                        : "bg-gray-100"
+                    }`}
+                    onClick={handleSimDisable}
+                    disabled={!isConnected}
+                  >
+                    DISABLE
+                  </button>
+                </div>
               </div>
 
               <div className="text-sm p-2">
