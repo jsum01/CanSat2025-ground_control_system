@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import logo from "../static/images/cosmoLink.jpeg";
 import { Telemetry } from "./Telemetry";
 import { CmdEcho } from "./CmdEcho";
@@ -18,48 +18,50 @@ const Main = () => {
   const CMD_MEC_ON = "CMD,3167,MEC,UC,ON";
   const CMD_MEC_OFF = "CMD,3167,MEC,UC,OFF";
 
+  // ===== UI 상태 =====
+  // 현재 탭
   const [activeTab, setActiveTab] = useState<"telemetry" | "cmdecho">(
     "telemetry"
   );
+  // 데이터 표시 방식
   const [viewMode, setViewMode] = useState<"charts" | "table">("charts");
-  const [serialPorts, setSerialPorts] = useState<Array<{ path: string }>>([]);
-  const [selectedPort, setSelectedPort] = useState<string>("");
-  const [isConnected, setIsConnected] = useState<boolean>(false);
-  const [isMec, setIsMec] = useState<boolean>(false);
-  const [isToggleTime, setIsToggleTime] = useState<boolean>(false);
-  const [UTCTime, setUTCTime] = useState<string>("");
-  const [telemetryData, setTelemetryData] = useState<TelemetryData[]>([
-    {
-      TEAM_ID: "3167",
-      MISSION_TIME: "12:45:03",
-      PACKET_COUNT: "42",
-      MODE: "F",
-      STATE: "LAUNCH_PAD",
-      ALTITUDE: "300.2",
-      TEMPERATURE: "25.6",
-      PRESSURE: "101.3",
-      VOLTAGE: "3.7",
-      GYRO_R: "0.1",
-      GYRO_P: "0.2",
-      GYRO_Y: "0.3",
-      ACCEL_R: "0.01",
-      ACCEL_P: "0.02",
-      ACCEL_Y: "0.03",
-      MAG_R: "120",
-      MAG_P: "130",
-      MAG_Y: "140",
-      AUTO_GYRO_ROTATION_RATE: "6.8",
-      GPS_TIME: "12:45:03",
-      GPS_ALTITUDE: "300.2",
-      GPS_LATITUDE: "37.1234",
-      GPS_LONGITUDE: "-84.4268",
-      GPS_SATS: "8",
-      CMD_ECHO: "CXON",
-      OPTIONAL_DATA: "",
-    },
-  ]);
 
-  // 데이터 처리 함수 추가
+  // ===== 시리얼 통신 =====
+  // 포트 목록
+  const [serialPorts, setSerialPorts] = useState<Array<{ path: string }>>([]);
+  // 선택된 포트
+  const [selectedPort, setSelectedPort] = useState<string>("");
+  // 포트 연결 상태
+  const [isConnected, setIsConnected] = useState<boolean>(false);
+  // MEC 시스템 상태
+  const [isMec, setIsMec] = useState<boolean>(false);
+
+  // ===== 시간 설정 =====
+  // 시간 설정 모드
+  const [isToggleTime, setIsToggleTime] = useState<boolean>(false);
+  // UTC 시간 입력값
+  const [UTCTime, setUTCTime] = useState<string>("");
+
+  // ===== 시뮬레이션 =====
+  // 시뮬레이션 상태
+  const [simStatus, setSimStatus] = useState<"DISABLED" | "ENABLED" | "ACTIVE">(
+    "DISABLED"
+  );
+  // 시뮬레이션 데이터 파일 저장
+  const [simFile, setSimFile] = useState<string[]>([]);
+  // 파일 Uploaded 상태 확인
+  const [hasValidSimFile, setHasValidSimFile] = useState(false);
+  // 시뮬레이션 데이터 수신 "가능여부" 상태
+  const [canReceiveSimData, setCanReceiveSimData] = useState<boolean>(false);
+  // 파일 입력 참조
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  // 명령어 실행 타이머
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // ===== 데이터 =====
+  // 텔레메트리 데이터
+  const [telemetryData, setTelemetryData] = useState<TelemetryData[]>([]);
+
   const handleSerialData = (_event: any, data: string) => {
     try {
       // 캐리지 리턴 제거 및 데이터 분리
@@ -69,20 +71,18 @@ const Main = () => {
         .map((value) => value.trim());
 
       // 데이터 검증을 위한 기본 체크
-      if (values.length < 25) {
-        // OPTIONAL_DATA를 제외한 최소 필수 필드 수
+      if (values.length < 24) {
         console.warn("Insufficient number of fields in telemetry data");
         return;
       }
 
-      // MODE 필드 검증 ('F' 또는 'S'만 허용)
       if (values[3] !== "F" && values[3] !== "S") {
         console.warn(`Invalid MODE value: ${values[3]}`);
         return;
       }
 
-      // STATE 필드 검증
       const validStates = [
+        "LAUNCH_WAIT",
         "LAUNCH_PAD",
         "ASCENT",
         "APOGEE",
@@ -114,30 +114,26 @@ const Main = () => {
         MAG_R: values[15],
         MAG_P: values[16],
         MAG_Y: values[17],
-        AUTO_GYRO_ROTATION_RATE: values[18],
-        GPS_TIME: values[19],
-        GPS_ALTITUDE: values[20],
-        GPS_LATITUDE: values[21],
-        GPS_LONGITUDE: values[22],
-        GPS_SATS: values[23],
-        CMD_ECHO: values[24],
-        OPTIONAL_DATA: values[25], // 선택적 필드
+        AUTO_GYRO_ROTATION_RATE: "0", // This field is not present in the incoming data
+        GPS_TIME: values[18],
+        GPS_ALTITUDE: values[19],
+        GPS_LATITUDE: values[20],
+        GPS_LONGITUDE: values[21],
+        GPS_SATS: values[22],
+        CMD_ECHO: values[23],
       };
 
-      // 필수 필드 검증
       if (!parsedData.TEAM_ID || !parsedData.MISSION_TIME) {
         console.warn("Missing required fields (TEAM_ID or MISSION_TIME)");
         return;
       }
 
-      // 시간 형식 검증 (hh:mm:ss)
       const timeRegex = /^([0-1][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$/;
       if (!timeRegex.test(parsedData.MISSION_TIME)) {
         console.warn(`Invalid MISSION_TIME format: ${parsedData.MISSION_TIME}`);
         return;
       }
 
-      // 유효한 데이터면 상태를 업데이트
       setTelemetryData((prev) => [...prev, parsedData]);
     } catch (error) {
       console.error("Failed to parse telemetry data:", error);
@@ -145,7 +141,6 @@ const Main = () => {
     }
   };
 
-  // 에러 처리 함수 추가
   const handleSerialError = (_event: any, error: string) => {
     console.error("Serial error:", error);
     alert(`Serial Error: ${error}`);
@@ -156,16 +151,13 @@ const Main = () => {
   useEffect(() => {
     const getPorts = async () => {
       try {
-        // 먼저 현재 포트 상태를 확인
         const portStatus = await ipcRenderer.invoke("check-port-status");
 
         if (portStatus.isConnected) {
-          // 이미 연결된 포트가 있다면 해당 정보로 상태 업데이트
           setIsConnected(true);
           setSelectedPort(portStatus.currentPort);
         }
 
-        // 포트 목록은 항상 가져옴 (연결 해제 시 필요)
         const ports = await ipcRenderer.invoke("get-ports");
         setSerialPorts(ports);
       } catch (error) {
@@ -185,24 +177,19 @@ const Main = () => {
   }, []);
 
   const handleConnect = async () => {
-    // 연결 시도
     if (!isConnected && selectedPort) {
       try {
-        // 먼저 현재 포트 상태를 확인합니다
         const portStatus = await ipcRenderer.invoke("check-port-status");
 
-        // 이미 다른 포트가 연결되어 있는 경우 처리
         if (portStatus.isConnected && portStatus.currentPort !== selectedPort) {
           alert(
             `다른 포트(${portStatus.currentPort})가 이미 연결되어 있습니다.`
           );
-          // UI 상태를 실제 연결 상태와 동기화
           setIsConnected(true);
           setSelectedPort(portStatus.currentPort);
           return;
         }
 
-        // 새로운 연결 시도
         const result = await ipcRenderer.invoke("connect-port", selectedPort);
         if (result.success) {
           setIsConnected(true);
@@ -214,16 +201,13 @@ const Main = () => {
         console.error("Connection error:", error);
         alert("연결 중 오류가 발생했습니다.");
       }
-    }
-    // 연결 해제
-    else if (isConnected) {
+    } else if (isConnected) {
       try {
         const result = await ipcRenderer.invoke("disconnect-port");
         if (result.success) {
           setIsConnected(false);
           setSelectedPort("");
 
-          // 포트 목록 다시 가져오기
           const ports = await ipcRenderer.invoke("get-ports");
           setSerialPorts(ports);
         } else {
@@ -315,9 +299,117 @@ const Main = () => {
     if (isConnected) {
       try {
         await ipcRenderer.invoke("send-data", CMD_TEL_OFF);
+
+        const saveResult = await ipcRenderer.invoke(
+          "save-telemetry",
+          telemetryData
+        );
+
+        if (saveResult.success) {
+          alert(
+            `텔레메트리 데이터가 저장되었습니다.\n저장 위치: ${saveResult.filePath}`
+          );
+        } else {
+          console.error("텔레메트리 데이터 저장 실패:", saveResult.error);
+          alert("텔레메트리 데이터 저장 실패");
+        }
       } catch (error) {
-        console.error("Failed to stop telemetry:", error);
+        console.error("텔레메트리 중지 실패:", error);
         alert("텔레메트리 중지 실패");
+      }
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const text = await file.text();
+
+      // 파일 파싱 (#으로 시작하는 줄과 빈 줄 제외)
+      const commands = text
+        .split("\n")
+        .filter((line) => line.trim() && !line.startsWith("#"))
+        .map((line) => line.replace("$", "3167"));
+
+      setSimFile(commands);
+      setHasValidSimFile(commands.length > 0);
+    }
+  };
+
+  // SIMP 명령 실행을 위한 인터벌 핸들러
+  const startSimulation = async () => {
+    let index = 0;
+
+    intervalRef.current = setInterval(async () => {
+      if (index >= simFile.length) {
+        clearInterval(intervalRef.current!);
+        handleSimDisable(); // 모든 데이터 전송 후 자동 비활성화
+        return;
+      }
+
+      try {
+        await ipcRenderer.invoke("send-data", simFile[index]);
+        index++;
+      } catch (error) {
+        console.error("Failed to send simulation command:", error);
+        clearInterval(intervalRef.current!);
+      }
+    }, 1000);
+  };
+
+  // 버튼 핸들러 수정
+  const handleSimEnable = async () => {
+    if (isConnected) {
+      try {
+        await ipcRenderer.invoke("send-data", CMD_SIM_ENABLE);
+        setSimStatus("ENABLED");
+        // 파일 선택 트리거
+        fileInputRef.current?.click();
+      } catch (error) {
+        console.error("Failed to enable simulation:", error);
+        alert("시뮬레이션 모드 활성화 실패");
+      }
+    }
+  };
+
+  const handleSimActivate = async () => {
+    if (isConnected && hasValidSimFile) {
+      try {
+        await ipcRenderer.invoke("send-data", CMD_SIM_ACTIVATE);
+        setSimStatus("ACTIVE");
+        startSimulation();
+      } catch (error) {
+        console.error("Failed to activate simulation:", error);
+        alert("시뮬레이션 실행 실패");
+      }
+    }
+  };
+
+  // 시뮬레이션 모드 해제
+  const handleSimDisable = async () => {
+    if (isConnected) {
+      try {
+        await ipcRenderer.invoke("send-data", CMD_SIM_DISABLE);
+        setSimStatus("DISABLED");
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+      } catch (error) {
+        console.error("Failed to disable simulation:", error);
+        alert("시뮬레이션 모드 비활성화 실패");
+      }
+    }
+  };
+
+  // 시뮬레이션 데이터 전송
+  const handleSendSimData = async (pressureValue: string) => {
+    if (isConnected && canReceiveSimData) {
+      try {
+        await ipcRenderer.invoke("send-data", `${CMD_SIMP}${pressureValue}`);
+      } catch (error) {
+        console.error("Failed to send simulation data:", error);
+        alert("시뮬레이션 데이터 전송 실패");
       }
     }
   };
@@ -337,7 +429,6 @@ const Main = () => {
         return null;
     }
   };
-
   return (
     <div className="flex flex-col h-screen bg-gray-200 font-sans overflow-hidden">
       <header className="flex items-center px-8 py-2 bg-white border-b border-gray-300 h-[70px]">
@@ -499,15 +590,50 @@ const Main = () => {
             <div className="mt-2">
               <div className="flex flex-col justify-center items-center bg-gray-100 p-4 gap-2">
                 <p className="m-0">SIMULATION MODE</p>
-                <p className="font-bold m-0">DISABLED</p>
+                <p className="font-bold m-0">{simStatus}</p>
                 <div className="flex gap-1">
-                  <button className="flex-1 p-2 rounded bg-gray-100 cursor-pointer text-sm">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    accept=".txt"
+                  />
+                  <button
+                    className={`flex-1 p-2 rounded cursor-pointer text-sm ${
+                      simStatus === "ENABLED"
+                        ? "bg-blue-900 text-white"
+                        : "bg-gray-100"
+                    }`}
+                    onClick={handleSimEnable}
+                    disabled={!isConnected}
+                  >
                     ENABLE
                   </button>
-                  <button className="flex-1 p-2 rounded bg-gray-100 cursor-pointer text-sm">
+                  <button
+                    className={`flex-1 p-2 rounded cursor-pointer text-sm ${
+                      simStatus === "ACTIVE"
+                        ? "bg-blue-900 text-white"
+                        : "bg-gray-100"
+                    }`}
+                    onClick={handleSimActivate}
+                    disabled={
+                      !isConnected ||
+                      !hasValidSimFile ||
+                      simStatus !== "ENABLED"
+                    }
+                  >
                     ACTIVATE
                   </button>
-                  <button className="flex-1 p-2 rounded bg-blue-900 text-white cursor-pointer text-sm">
+                  <button
+                    className={`flex-1 p-2 rounded cursor-pointer text-sm ${
+                      simStatus === "DISABLED"
+                        ? "bg-blue-900 text-white"
+                        : "bg-gray-100"
+                    }`}
+                    onClick={handleSimDisable}
+                    disabled={!isConnected}
+                  >
                     DISABLE
                   </button>
                 </div>
@@ -515,10 +641,7 @@ const Main = () => {
 
               <div className="text-sm p-2">
                 {[
-                  [
-                    "Software State:",
-                    isConnected ? "CONNECTED" : "DISCONNECTED",
-                  ],
+                  ["STATE:", isConnected ? "CONNECTED" : "DISCONNECTED"],
                   [
                     "GPS TIME:",
                     telemetryData[telemetryData.length - 1]?.GPS_TIME || "null",
@@ -539,7 +662,7 @@ const Main = () => {
                       "null",
                   ],
                   [
-                    "GPS STATS:",
+                    "GPS SATS:",
                     telemetryData[telemetryData.length - 1]?.GPS_SATS || "null",
                   ],
                 ].map(([label, value]) => (

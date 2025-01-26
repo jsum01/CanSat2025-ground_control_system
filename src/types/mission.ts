@@ -26,10 +26,10 @@
 * GPS_LONGITUDE,
 * GPS_SATS,
 * CMD_ECHO,
-* OPTIONAL_DATA(선택)
-* - 각 필드는 콤마(,)로 구분
-* - 패킷은 캐리지 리턴(CR) 문자로 종료
-* - 데이터 필드 내에 콤마 사용 금지
+// * OPTIONAL_DATA(선택)
+// * - 각 필드는 콤마(,)로 구분
+// * - 패킷은 캐리지 리턴(CR) 문자로 종료
+// * - 데이터 필드 내에 콤마 사용 금지
 */
 export interface TelemetryData {
   // 기본 식별 및 시간 정보
@@ -87,6 +87,6 @@ export interface TelemetryData {
   // 명령어 에코
   CMD_ECHO: string;         // 마지막으로 수신 및 처리된 명령어 (예: 'CXON', 'SP101325')
  
-  // 선택적 데이터 (콤마로 구분된 추가 필드)
-  OPTIONAL_DATA?: string;   // 팀이 중요하다고 판단하는 추가 데이터 필드
+  // // 선택적 데이터 (콤마로 구분된 추가 필드)
+  // OPTIONAL_DATA?: string;   // 팀이 중요하다고 판단하는 추가 데이터 필드
  }
