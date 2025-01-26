@@ -10,7 +10,7 @@ interface TelemetryProps {
   missionData: TelemetryData[];
 }
 
-// 마커 아이콘 설정
+// 마커 아이콘 설정 - Leaflet의 기본 마커 아이콘 사용
 const icon = L.icon({
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
   iconSize: [25, 41],
@@ -21,6 +21,7 @@ export const Telemetry: React.FC<TelemetryProps> = ({
   viewMode,
   missionData,
 }) => {
+  // 차트 인스턴스를 저장할 ref 객체들
   const altitudeChartRef = useRef<Chart | null>(null);
   const temperatureChartRef = useRef<Chart | null>(null);
   const voltageChartRef = useRef<Chart | null>(null);
@@ -29,8 +30,10 @@ export const Telemetry: React.FC<TelemetryProps> = ({
   const magChartRef = useRef<Chart | null>(null);
   const gyroChartRef = useRef<Chart | null>(null);
 
+  // GPS 위치 상태 관리
   const [position, setPosition] = useState<[number, number]>([37.5665, 126.9780]);
 
+  // GPS 위치 업데이트 효과
   useEffect(() => {
     if (missionData.length > 0) {
       const latestData = missionData[missionData.length - 1];
@@ -43,13 +46,23 @@ export const Telemetry: React.FC<TelemetryProps> = ({
     }
   }, [missionData]);
 
+  // 차트 생성 및 업데이트 효과
   useEffect(() => {
-    if (viewMode === "charts") {
-      const timeLabels = Array.from({ length: 50 }, (_, i) => i.toString());
+    if (viewMode === "charts" && missionData.length > 0) {
+      // 최근 50개의 데이터만 사용하여 차트 가독성 유지
+      const recentData = missionData.slice(-50);
+      const timeLabels = recentData.map(d => d.MISSION_TIME);
 
+      // 차트 생성 함수
       const createChart = (canvasId: string, datasets: { data: number[], color: string, label: string }[]) => {
         const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
         if (!canvas) return null;
+
+        // 기존 차트가 있다면 제거
+        const existingChart = Chart.getChart(canvas);
+        if (existingChart) {
+          existingChart.destroy();
+        }
 
         return new Chart(canvas, {
           type: "line",
@@ -60,7 +73,7 @@ export const Telemetry: React.FC<TelemetryProps> = ({
               data: dataset.data,
               borderColor: dataset.color,
               borderWidth: 2,
-              tension: 0,
+              tension: 0.1,
               pointRadius: 0,
               fill: false,
             })),
@@ -108,68 +121,99 @@ export const Telemetry: React.FC<TelemetryProps> = ({
         });
       };
 
-      // 단일 데이터셋 차트 데이터
-      const attitudeData = Array.from({ length: 50 }, (_, i) => i * 2);
-      const temperatureData = Array.from({ length: 50 }, (_, i) => 20 + Math.sin(i / 5) * 5);
-      const voltageData = Array.from({ length: 50 }, (_, i) => 12 + i / 10);
-      const pressureData = Array.from({ length: 50 }, (_, i) => 100 + i * 3);
+      // 각 센서 데이터에 대한 차트 생성
+      altitudeChartRef.current = createChart("altitudeGraph", [{
+        data: recentData.map(d => parseFloat(d.ALTITUDE) || 0),
+        color: "#0000FF",
+        label: "Altitude"
+      }]);
 
-      // 다중 데이터셋 차트 데이터
-      const accelData = {
-        r: Array.from({ length: 50 }, (_, i) => Math.sin(i / 10) * 5),
-        p: Array.from({ length: 50 }, (_, i) => Math.cos(i / 10) * 5),
-        y: Array.from({ length: 50 }, (_, i) => Math.sin((i + 2) / 10) * 5)
-      };
+      temperatureChartRef.current = createChart("temperatureGraph", [{
+        data: recentData.map(d => parseFloat(d.TEMPERATURE) || 0),
+        color: "#FF0000",
+        label: "Temperature"
+      }]);
 
-      const magData = {
-        r: Array.from({ length: 50 }, (_, i) => Math.sin(i / 8) * 10),
-        p: Array.from({ length: 50 }, (_, i) => Math.cos(i / 8) * 10),
-        y: Array.from({ length: 50 }, (_, i) => Math.sin((i + 3) / 8) * 10)
-      };
+      voltageChartRef.current = createChart("voltageGraph", [{
+        data: recentData.map(d => parseFloat(d.VOLTAGE) || 0),
+        color: "#00FF00",
+        label: "Voltage"
+      }]);
 
-      const gyroData = {
-        r: Array.from({ length: 50 }, (_, i) => Math.sin(i / 12) * 15),
-        p: Array.from({ length: 50 }, (_, i) => Math.cos(i / 12) * 15),
-        y: Array.from({ length: 50 }, (_, i) => Math.sin((i + 4) / 12) * 15)
-      };
+      pressureChartRef.current = createChart("pressureGraph", [{
+        data: recentData.map(d => parseFloat(d.PRESSURE) || 0),
+        color: "#00FFFF",
+        label: "Pressure"
+      }]);
 
-      // 단일 데이터셋 차트 생성
-      altitudeChartRef.current = createChart("altitudeGraph", [{ data: attitudeData, color: "#0000FF", label: "Altitude" }]);
-      temperatureChartRef.current = createChart("temperatureGraph", [{ data: temperatureData, color: "#FF0000", label: "Temperature" }]);
-      voltageChartRef.current = createChart("voltageGraph", [{ data: voltageData, color: "#00FF00", label: "Voltage" }]);
-      pressureChartRef.current = createChart("pressureGraph", [{ data: pressureData, color: "#00FFFF", label: "Pressure" }]);
-
-      // 다중 데이터셋 차트 생성
+      // 3축 센서 데이터 차트 생성
       accelChartRef.current = createChart("accelGraph", [
-        { data: accelData.r, color: "#FF0000", label: "ACCEL R" },
-        { data: accelData.p, color: "#00FF00", label: "ACCEL P" },
-        { data: accelData.y, color: "#0000FF", label: "ACCEL Y" }
+        {
+          data: recentData.map(d => parseFloat(d.ACCEL_R) || 0),
+          color: "#FF0000",
+          label: "ACCEL R"
+        },
+        {
+          data: recentData.map(d => parseFloat(d.ACCEL_P) || 0),
+          color: "#00FF00",
+          label: "ACCEL P"
+        },
+        {
+          data: recentData.map(d => parseFloat(d.ACCEL_Y) || 0),
+          color: "#0000FF",
+          label: "ACCEL Y"
+        }
       ]);
 
       magChartRef.current = createChart("magGraph", [
-        { data: magData.r, color: "#FF0000", label: "MAG R" },
-        { data: magData.p, color: "#00FF00", label: "MAG P" },
-        { data: magData.y, color: "#0000FF", label: "MAG Y" }
+        {
+          data: recentData.map(d => parseFloat(d.MAG_R) || 0),
+          color: "#FF0000",
+          label: "MAG R"
+        },
+        {
+          data: recentData.map(d => parseFloat(d.MAG_P) || 0),
+          color: "#00FF00",
+          label: "MAG P"
+        },
+        {
+          data: recentData.map(d => parseFloat(d.MAG_Y) || 0),
+          color: "#0000FF",
+          label: "MAG Y"
+        }
       ]);
 
       gyroChartRef.current = createChart("gyroGraph", [
-        { data: gyroData.r, color: "#FF0000", label: "GYRO R" },
-        { data: gyroData.p, color: "#00FF00", label: "GYRO P" },
-        { data: gyroData.y, color: "#0000FF", label: "GYRO Y" }
+        {
+          data: recentData.map(d => parseFloat(d.GYRO_R) || 0),
+          color: "#FF0000",
+          label: "GYRO R"
+        },
+        {
+          data: recentData.map(d => parseFloat(d.GYRO_P) || 0),
+          color: "#00FF00",
+          label: "GYRO P"
+        },
+        {
+          data: recentData.map(d => parseFloat(d.GYRO_Y) || 0),
+          color: "#0000FF",
+          label: "GYRO Y"
+        }
       ]);
 
+      // 컴포넌트 언마운트 시 차트 정리
       return () => {
-        altitudeChartRef.current?.destroy();
-        temperatureChartRef.current?.destroy();
-        voltageChartRef.current?.destroy();
-        pressureChartRef.current?.destroy();
-        accelChartRef.current?.destroy();
-        magChartRef.current?.destroy();
-        gyroChartRef.current?.destroy();
+        [
+          altitudeChartRef, temperatureChartRef, voltageChartRef,
+          pressureChartRef, accelChartRef, magChartRef, gyroChartRef
+        ].forEach(chartRef => {
+          chartRef.current?.destroy();
+        });
       };
     }
-  }, [viewMode]);
+  }, [viewMode, missionData]);
 
+  // GPS 지도 컴포넌트
   const MapComponent = () => (
     <div className="bg-white border border-gray-200 rounded p-2 flex flex-col min-h-0">
       <h3 className="m-0 mb-2 text-sm text-blue-900">GPS Location</h3>

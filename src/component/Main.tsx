@@ -28,49 +28,16 @@ const Main = () => {
   const [isMec, setIsMec] = useState<boolean>(false);
   const [isToggleTime, setIsToggleTime] = useState<boolean>(false);
   const [UTCTime, setUTCTime] = useState<string>("");
-  const [telemetryData, setTelemetryData] = useState<TelemetryData[]>([
-    {
-      TEAM_ID: "3167",
-      MISSION_TIME: "12:45:03",
-      PACKET_COUNT: "42",
-      MODE: "F",
-      STATE: "LAUNCH_PAD",
-      ALTITUDE: "300.2",
-      TEMPERATURE: "25.6",
-      PRESSURE: "101.3",
-      VOLTAGE: "3.7",
-      GYRO_R: "0.1",
-      GYRO_P: "0.2",
-      GYRO_Y: "0.3",
-      ACCEL_R: "0.01",
-      ACCEL_P: "0.02",
-      ACCEL_Y: "0.03",
-      MAG_R: "120",
-      MAG_P: "130",
-      MAG_Y: "140",
-      AUTO_GYRO_ROTATION_RATE: "6.8",
-      GPS_TIME: "12:45:03",
-      GPS_ALTITUDE: "300.2",
-      GPS_LATITUDE: "37.1234",
-      GPS_LONGITUDE: "-84.4268",
-      GPS_SATS: "8",
-      CMD_ECHO: "CXON",
-      OPTIONAL_DATA: "",
-    },
-  ]);
+  const [telemetryData, setTelemetryData] = useState<TelemetryData[]>([]);
 
   // 데이터 처리 함수 추가
   const handleSerialData = (_event: any, data: string) => {
     try {
       // 캐리지 리턴 제거 및 데이터 분리
-      const values = data
-        .trim()
-        .split(",")
-        .map((value) => value.trim());
+      const values = data.trim().split(",").map((value) => value.trim());
 
       // 데이터 검증을 위한 기본 체크
-      if (values.length < 25) {
-        // OPTIONAL_DATA를 제외한 최소 필수 필드 수
+      if (values.length < 24) {
         console.warn("Insufficient number of fields in telemetry data");
         return;
       }
@@ -83,6 +50,7 @@ const Main = () => {
 
       // STATE 필드 검증
       const validStates = [
+        "LAUNCH_WAIT",
         "LAUNCH_PAD",
         "ASCENT",
         "APOGEE",
@@ -114,14 +82,13 @@ const Main = () => {
         MAG_R: values[15],
         MAG_P: values[16],
         MAG_Y: values[17],
-        AUTO_GYRO_ROTATION_RATE: values[18],
-        GPS_TIME: values[19],
-        GPS_ALTITUDE: values[20],
-        GPS_LATITUDE: values[21],
-        GPS_LONGITUDE: values[22],
-        GPS_SATS: values[23],
-        CMD_ECHO: values[24],
-        OPTIONAL_DATA: values[25], // 선택적 필드
+        AUTO_GYRO_ROTATION_RATE: "0", // This field is not present in the incoming data
+        GPS_TIME: values[18],
+        GPS_ALTITUDE: values[19],
+        GPS_LATITUDE: values[20],
+        GPS_LONGITUDE: values[21],
+        GPS_SATS: values[22],
+        CMD_ECHO: values[23]
       };
 
       // 필수 필드 검증
@@ -314,9 +281,18 @@ const Main = () => {
   const handleStopTelemetry = async () => {
     if (isConnected) {
       try {
-        await ipcRenderer.invoke("send-data", CMD_TEL_OFF);
+        await ipcRenderer.invoke("send-data",CMD_TEL_OFF);
+        
+        const saveResult = await ipcRenderer.invoke("save-telemetry", telemetryData);
+        
+        if (saveResult.success) {
+          alert(`텔레메트리 데이터가 저장되었습니다.\n저장 위치: ${saveResult.filePath}`);
+        } else {
+          console.error("텔레메트리 데이터 저장 실패:", saveResult.error);
+          alert("텔레메트리 데이터 저장 실패");
+        }
       } catch (error) {
-        console.error("Failed to stop telemetry:", error);
+        console.error("텔레메트리 중지 실패:", error);
         alert("텔레메트리 중지 실패");
       }
     }
@@ -516,7 +492,7 @@ const Main = () => {
               <div className="text-sm p-2">
                 {[
                   [
-                    "Software State:",
+                    "STATE:",
                     isConnected ? "CONNECTED" : "DISCONNECTED",
                   ],
                   [
@@ -539,7 +515,7 @@ const Main = () => {
                       "null",
                   ],
                   [
-                    "GPS STATS:",
+                    "GPS SATS:",
                     telemetryData[telemetryData.length - 1]?.GPS_SATS || "null",
                   ],
                 ].map(([label, value]) => (
