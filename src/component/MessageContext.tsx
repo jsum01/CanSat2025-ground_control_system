@@ -1,5 +1,7 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-const { ipcRenderer } = window.require("electron");
+import { useSerialContext } from "context/SerialContext";
+import React, { createContext, useState, useContext, useEffect } from "react";
+
+const { ipcRenderer } = useSerialContext();
 
 type MessageContextType = {
   messages: string[];
@@ -8,7 +10,9 @@ type MessageContextType = {
 
 const MessageContext = createContext<MessageContextType | undefined>(undefined);
 
-export const MessageProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
+export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [messages, setMessages] = useState<string[]>([]);
 
   useEffect(() => {
@@ -20,7 +24,7 @@ export const MessageProvider: React.FC<{children: React.ReactNode}> = ({ childre
     };
 
     initPort(); // 초기 마운트 시 실행
-    
+
     const handleSerialData = (_event: any, data: string) => {
       const timestamp = new Date().toLocaleTimeString();
       setMessages((prev) => [...prev, `[${timestamp}] RX: ${data}`]);
@@ -49,6 +53,7 @@ export const MessageProvider: React.FC<{children: React.ReactNode}> = ({ childre
 
 export const useMessages = () => {
   const context = useContext(MessageContext);
-  if (!context) throw new Error('useMessages must be used within MessageProvider');
+  if (!context)
+    throw new Error("useMessages must be used within MessageProvider");
   return context;
 };

@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useMessages } from "./MessageContext";
 import { CMD } from "constants/commands";
-import { useCommands } from "hooks/useCommand";
-
-// 일렉트론 IPC 통신을 위한 renderer 프로세스 import
-const { ipcRenderer } = window.require("electron");
+import { useSimulation } from "hooks/useSimulation";
+import { electronService } from "services/electronService";
 
 export const CmdEcho: React.FC = () => {
+  // 중앙 서비스
+  const { ipcRenderer } = electronService;
+
   // 메시지 상태 관리를 위한 컨텍스트 훅
   const { messages, setMessages } = useMessages();
   // 입력 필드 상태 관리
@@ -20,8 +21,10 @@ export const CmdEcho: React.FC = () => {
   };
 
   const cmd = CMD;
-  const useSim = useCommands().useSim();
+  const useSim = useSimulation();
   const startCMD = "CMD,3167,";
+
+  let isEnable = false;
 
   // 명령어 전송 처리
   const handleSubmit = async (e: React.FormEvent) => {
