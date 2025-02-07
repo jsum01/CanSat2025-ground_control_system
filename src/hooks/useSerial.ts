@@ -1,15 +1,30 @@
-import { useState } from "react";
+import { useSerialContext } from "context/SerialContext";
 import { TelemetryData } from "types/mission";
 
-// hooks/useSerial.ts
 export const useSerial = () => {
-  const [serialPorts, setSerialPorts] = useState<Array<{ path: string }>>([]);
-  const [selectedPort, setSelectedPort] = useState("");
-  const [isConnected, setIsConnected] = useState(false);
-  const [isMec, setIsMec] = useState(false);
+  const {
+    isConnected,
+    setIsConnected,
+    serialPorts,
+    setSerialPorts,
+    setSelectedPort,
+    selectedPort,
+  } = useSerialContext();
+
+  const handleSerialError = (_event: any, error: string) => {
+    if (isConnected) {
+      alert("Serial port already connected");
+      return;
+    }
+    console.error("Serial error:", error);
+    alert(`Serial Error: ${error}`);
+    setIsConnected(false);
+    setSelectedPort("");
+  };
 
   // telemetryData는 파라미터로 받아서 처리
-  const handleSerialData = (telemetryData: TelemetryData[], setTelemetryData: Function) =>
+  const handleSerialData =
+    (telemetryData: TelemetryData[], setTelemetryData: Function) =>
     (_event: any, data: string) => {
       try {
         // 캐리지 리턴 제거 및 데이터 분리
@@ -98,8 +113,7 @@ export const useSerial = () => {
     setSelectedPort,
     isConnected,
     setIsConnected,
-    isMec,
-    setIsMec,
     handleSerialData,
+    handleSerialError,
   };
 };

@@ -1,32 +1,13 @@
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useSerial } from "./useSerial";
 import { CMD } from "constants/commands";
-import { TelemetryData } from "types/mission";
-const { ipcRenderer } = window.require("electron");
+import { electronService } from "services/electronService";
+import { useSerialContext } from "context/SerialContext";
 
-export const useCommands = () => {
-  // =========================
-  // ===========TEL===========
-  const useTel = () => {
-    const [telemetryData, setTelemetryData] = useState<TelemetryData[]>([]);
-    return {
-      telemetryData,
-      setTelemetryData,
-    };
-  };
+export const useSimulation = () => {
 
-  // =========================
-  // ===========TIME==========
-  const useTime = () => {
-    const [isToggleTime, setIsToggleTime] = useState(false);
-    const [UTCTime, setUTCTime] = useState("");
+    const { isConnected, ipcRenderer } = useSerialContext();
 
-    return { isToggleTime, setIsToggleTime, UTCTime, setUTCTime };
-  };
-
-  // =========================
-  // ===========SIM===========
-  const useSim = () => {
     const [simStatus, setSimStatus] = useState<
       "DISABLED" | "ENABLED" | "ACTIVE"
     >("DISABLED");
@@ -36,7 +17,6 @@ export const useCommands = () => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-    const serialHk = useSerial();
     const sim = CMD.SIM;
 
     // SIMP 명령 실행을 위한 인터벌 핸들러
@@ -76,15 +56,14 @@ export const useCommands = () => {
       }
     };
 
-    // 버튼 핸들러 수정
     const handleSimEnable = async () => {
-      if (serialHk.isConnected) {
+      if (isConnected) {
         try {
           const response = await ipcRenderer.invoke("send-data", sim.ENABLE);
           console.log("Send data response:", response); // 응답 확인
-          setSimStatus("ENABLED");
           // 파일 선택 트리거
           fileInputRef.current?.click();
+          setSimStatus("ENABLED");
         } catch (error) {
           console.error("Failed to enable simulation:", error);
           alert("시뮬레이션 모드 활성화 실패");
@@ -93,7 +72,7 @@ export const useCommands = () => {
     };
 
     const handleSimActivate = async () => {
-      if (serialHk.isConnected && hasValidSimFile) {
+      if (isConnected && hasValidSimFile) {
         try {
           await ipcRenderer.invoke("send-data", sim.ACTIVATE);
           setSimStatus("ACTIVE");
@@ -107,7 +86,7 @@ export const useCommands = () => {
 
     // 시뮬레이션 모드 해제
     const handleSimDisable = async () => {
-      if (serialHk.isConnected) {
+      if (isConnected) {
         try {
           await ipcRenderer.invoke("send-data", sim.DISABLE);
           setSimStatus("DISABLED");
@@ -124,7 +103,7 @@ export const useCommands = () => {
 
     // 수동 시뮬레이션 데이터 전송 (startSimulation에서 진행하고 있어서 사용되지 않지만, 혹시 수동으로 전송해야 할 경우를 대비해 남겨놓는다.)
     const handleSendSimData = async (pressureValue: string) => {
-      if (serialHk.isConnected && canReceiveSimData) {
+      if (isConnected && canReceiveSimData) {
         try {
           await ipcRenderer.invoke(
             "send-data",
@@ -156,20 +135,3 @@ export const useCommands = () => {
       handleSendSimData,
     };
   };
-
-  // =========================
-  // ===========CAL===========
-  const useCal = () => {};
-
-  // =========================
-  // ===========MEC===========
-  const useMec = () => {};
-
-  return {
-    useTel,
-    useTime,
-    useSim,
-    useCal,
-    useMec
-  };
-};
