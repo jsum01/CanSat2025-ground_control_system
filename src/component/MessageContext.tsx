@@ -1,7 +1,7 @@
-import { useSerialContext } from "context/SerialContext";
 import React, { createContext, useState, useContext, useEffect } from "react";
+import { electronService } from "services/electronService";
 
-const { ipcRenderer } = useSerialContext();
+const { ipcRenderer } = electronService;
 
 type MessageContextType = {
   messages: string[];
