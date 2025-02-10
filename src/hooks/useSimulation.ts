@@ -1,7 +1,5 @@
 import { useRef, useState } from "react";
-import { useSerial } from "./useSerial";
 import { CMD } from "constants/commands";
-import { electronService } from "services/electronService";
 import { useSerialContext } from "context/SerialContext";
 
 export const useSimulation = () => {
