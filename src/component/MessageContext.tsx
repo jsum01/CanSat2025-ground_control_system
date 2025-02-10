@@ -1,7 +1,5 @@
+import { useSerialContext } from "context/SerialContext";
 import React, { createContext, useState, useContext, useEffect } from "react";
-import { electronService } from "services/electronService";
-
-const { ipcRenderer } = electronService;
 
 type MessageContextType = {
   messages: string[];
@@ -13,6 +11,7 @@ const MessageContext = createContext<MessageContextType | undefined>(undefined);
 export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
+  const { ipcRenderer } = useSerialContext();
   const [messages, setMessages] = useState<string[]>([]);
 
   useEffect(() => {
@@ -42,7 +41,7 @@ export const MessageProvider: React.FC<{ children: React.ReactNode }> = ({
       ipcRenderer.removeListener("serial-data", handleSerialData);
       ipcRenderer.removeListener("serial-sent", handleSentData);
     };
-  }, []);
+  }, [ipcRenderer]);
 
   return (
     <MessageContext.Provider value={{ messages, setMessages }}>

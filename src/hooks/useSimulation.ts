@@ -18,6 +18,7 @@ export const useSimulation = () => {
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
     const sim = CMD.SIM;
+    const simp = CMD.SIMP;
 
     // SIMP 명령 실행을 위한 인터벌 핸들러
     const startSimulation = async () => {
@@ -107,7 +108,7 @@ export const useSimulation = () => {
         try {
           await ipcRenderer.invoke(
             "send-data",
-            `${sim.PRESSURE}${pressureValue}`
+            `${simp}${pressureValue}`
           );
         } catch (error) {
           console.error("Failed to send simulation data:", error);
