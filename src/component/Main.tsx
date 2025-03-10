@@ -126,7 +126,7 @@ const Main = () => {
         console.error("Failed to calibrate:", error);
         alert(
           `캘리브레이션 실패
-   
+  
           Calibration failed`
         );
       }
@@ -323,10 +323,21 @@ const Main = () => {
     }
   };
 
-  const today = new Date();
-  const time = `KST ${String(today.getHours()).padStart(2, "0")}:${String(
-    today.getMinutes()
-  ).padStart(2, "0")}:${String(today.getSeconds()).padStart(2, "0")}`;
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = new Date();
+      const formattedTime = `${String(now.getUTCHours()).padStart(2, "0")}:${String(
+        now.getUTCMinutes()
+      ).padStart(2, "0")}:${String(now.getUTCSeconds()).padStart(2, "0")}`;
+      
+      timeHk.setUTCTime(formattedTime);
+    }, 1000);
+    
+    // 컴포넌트 언마운트 시 인터벌 정리
+    return () => {
+      clearInterval(timer);
+    };
+  }, []);
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -376,7 +387,7 @@ const Main = () => {
       <div className="flex justify-between items-center px-8 py-2 bg-gray-100 border-b border-gray-300 h-[50px]">
         <div className="flex flex-row justify-center items-center gap-4">
           <span>MISSION TIME</span>
-          <span>{time}</span>
+          <span>{`UTC ${timeHk.UTCTime}`}</span>
         </div>
 
         <div className="flex gap-4">
