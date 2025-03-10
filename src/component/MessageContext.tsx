@@ -22,13 +22,21 @@ export const MessageProvider: React.FC<{children: React.ReactNode}> = ({ childre
     initPort(); // 초기 마운트 시 실행
     
     const handleSerialData = (_event: any, data: string) => {
-      const timestamp = new Date().toLocaleTimeString();
-      setMessages((prev) => [...prev, `[${timestamp}] RX: ${data}`]);
+      const now = new Date();
+      const utcTimestamp = `${String(now.getUTCHours()).padStart(2, "0")}:${String(
+        now.getUTCMinutes()
+      ).padStart(2, "0")}:${String(now.getUTCSeconds()).padStart(2, "0")}`;
+      
+      setMessages((prev) => [...prev, `[UTC ${utcTimestamp}] RX: ${data}`]);
     };
-
+    
     const handleSentData = (_event: any, data: string) => {
-      const timestamp = new Date().toLocaleTimeString();
-      setMessages((prev) => [...prev, `[${timestamp}] TX: ${data}`]);
+      const now = new Date();
+      const utcTimestamp = `${String(now.getUTCHours()).padStart(2, "0")}:${String(
+        now.getUTCMinutes()
+      ).padStart(2, "0")}:${String(now.getUTCSeconds()).padStart(2, "0")}`;
+      
+      setMessages((prev) => [...prev, `[UTC ${utcTimestamp}] TX: ${data}`]);
     };
 
     ipcRenderer.on("serial-data", handleSerialData);
