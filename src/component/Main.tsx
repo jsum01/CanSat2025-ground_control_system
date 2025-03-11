@@ -9,6 +9,7 @@ import { useTimeControl } from "hooks/useTimeControl";
 import { useSimulation } from "hooks/useSimulation";
 import { useMechanical } from "hooks/useMechanical";
 import { useSerialContext } from "context/SerialContext";
+import { MissionTime } from "./MissionTime";
 
 const Main: React.FC = () => {
   // 중앙 서비스
@@ -37,7 +38,7 @@ const Main: React.FC = () => {
 
   const handleToggleMEC = async () => {
     if (isConnected) {
-      console.log(`mec status: ${isMec}`)
+      console.log(`mec status: ${isMec}`);
       try {
         if (!isMec) {
           await ipcRenderer.invoke("send-data", cmd.MEC.ON);
@@ -163,6 +164,7 @@ const Main: React.FC = () => {
         return null;
     }
   };
+
   return (
     <div className="flex flex-col h-screen bg-gray-200 font-sans overflow-hidden">
       <header className="flex items-center px-8 py-2 bg-white border-b border-gray-300 h-[70px]">
@@ -199,7 +201,7 @@ const Main: React.FC = () => {
       <div className="flex justify-between items-center px-8 py-2 bg-gray-100 border-b border-gray-300 h-[50px]">
         <div className="flex flex-row justify-center items-center gap-4">
           <span>MISSION TIME</span>
-          <span>{`UTC ${useTime.UTCTime}`}</span>
+          <MissionTime UTCTime={useTime.UTCTime} />
         </div>
 
         <div className="flex gap-4">
@@ -218,9 +220,10 @@ const Main: React.FC = () => {
               <form onSubmit={useTime.handleSetUTCTime} className="flex-1">
                 <input
                   type="text"
-                  onChange={(e) => useTime.setUTCTime(e.target.value)}
+                  onChange={useTime.handleTimeInputChange}
                   value={useTime.UTCTime}
-                  placeholder="Enter UTC Time"
+                  placeholder="Enter UTC Time (hh:mm:ss)"
+                  maxLength={8}
                   className="w-full px-3 py-2 rounded border border-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-900 focus:border-transparent placeholder-gray-400 font-mono"
                 />
               </form>
