@@ -144,18 +144,12 @@ const Main: React.FC = () => {
         console.error("Failed to calibrate:", error);
         alert(
           `캘리브레이션 실패
-   
+  
           Calibration failed`
         );
       }
     }
   };
-
-  // MISSION TIME에 표시 될 시간
-  const today = new Date();
-  const time = `KST ${String(today.getHours()).padStart(2, "0")}:${String(
-    today.getMinutes()
-  ).padStart(2, "0")}:${String(today.getSeconds()).padStart(2, "0")}`;
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -205,7 +199,7 @@ const Main: React.FC = () => {
       <div className="flex justify-between items-center px-8 py-2 bg-gray-100 border-b border-gray-300 h-[50px]">
         <div className="flex flex-row justify-center items-center gap-4">
           <span>MISSION TIME</span>
-          <span>{time}</span>
+          <span>{`UTC ${useTime.UTCTime}`}</span>
         </div>
 
         <div className="flex gap-4">

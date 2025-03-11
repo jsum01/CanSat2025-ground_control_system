@@ -63,8 +63,7 @@ ipcMain.handle('save-telemetry', async (event, data) => {
     });
 
     // 파일명 생성 (타임스탬프 포함)
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const fileName = `telemetry_${timestamp}.csv`;
+    const fileName = `Flight_3167.csv`;
     const filePath = path.join(app.getPath('downloads'), fileName);
 
     // CSV 파일 작성
