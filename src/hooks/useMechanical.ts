@@ -1,28 +1,21 @@
 import { CMD } from "constants/commands";
 import { useSerialContext } from "context/SerialContext";
-import { useState } from "react";
 
 export const useMechanical = () => {
   const { isConnected, ipcRenderer } = useSerialContext();
-  const cmd = CMD;
-  const [isMec, setIsMec] = useState(false);
-
-  const handleToggleMEC = async () => {
+  
+  const sendMecCommand = async (isOn: boolean) => {
     if (isConnected) {
       try {
-        if (isMec) {
-          await ipcRenderer.invoke("send-data", cmd.MEC.ON);
-          setIsMec(true);
-        } else {
-          await ipcRenderer.invoke("send-data", cmd.MEC.OFF);
-          setIsMec(false);
-        }
+        await ipcRenderer.invoke("send-data", isOn ? CMD.MEC.ON : CMD.MEC.OFF);
+        return true;
       } catch (error) {
-        console.error("Failed to stop telemetry:", error);
-        alert("텔레메트리 중지 실패");
+        console.error("Failed to send MEC command:", error);
+        return false;
       }
     }
+    return false;
   };
 
-  return { handleToggleMEC, isMec, setIsMec };
+  return { sendMecCommand };
 };

@@ -32,6 +32,27 @@ const Main: React.FC = () => {
   // constants 변수
   const cmd = CMD;
 
+  // MEC ON 버튼 상태를 관리하기 위함
+  const [isMec, setIsMec] = useState(false);
+
+  const handleToggleMEC = async () => {
+    if (isConnected) {
+      console.log(`mec status: ${isMec}`)
+      try {
+        if (!isMec) {
+          await ipcRenderer.invoke("send-data", cmd.MEC.ON);
+          setIsMec(true);
+        } else {
+          await ipcRenderer.invoke("send-data", cmd.MEC.OFF);
+          setIsMec(false);
+        }
+      } catch (error) {
+        console.error("Failed to toggle MEC:", error);
+        alert(`MEC 상태 변경 실패\n\nFailed to toggle MEC state`);
+      }
+    }
+  };
+
   useEffect(() => {
     const getPorts = async () => {
       try {
@@ -227,12 +248,12 @@ const Main: React.FC = () => {
           </button>
           <button
             className={`px-4 py-1 rounded text-white font-bold hover:bg-blue-800 ${
-              useMec.isMec ? "bg-red-600 hover:bg-red-700" : "bg-blue-900"
+              isMec ? "bg-red-600 hover:bg-red-700" : "bg-blue-900"
             }`}
             disabled={!isConnected}
-            onClick={useMec.handleToggleMEC}
+            onClick={handleToggleMEC}
           >
-            {useMec.isMec ? "MEC OFF" : "MEC ON"}
+            {isMec ? "MEC OFF" : "MEC ON"}
           </button>
           <button
             className="px-4 py-2 rounded bg-blue-900 text-white font-bold hover:bg-blue-800"
@@ -371,7 +392,9 @@ const Main: React.FC = () => {
                     }`}
                     onClick={() => {
                       useSim.handleSimDisable();
-                      alert("Simulation mode is ending.\n시뮬레이션 모드가 종료됩니다.")
+                      alert(
+                        "Simulation mode is ending.\n시뮬레이션 모드가 종료됩니다."
+                      );
                     }}
                     disabled={!isConnected}
                   >
