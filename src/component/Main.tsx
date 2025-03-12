@@ -2,16 +2,20 @@ import React, { useState, useEffect, useRef } from "react";
 import logo from "../static/images/cosmoLink.jpeg";
 import { Telemetry } from "./Telemetry";
 import { CmdEcho } from "./CmdEcho";
-import { TelemetryData } from "../types/mission";
-import { useTime } from "hooks/useTime";
 import { useSerial } from "hooks/useSerial";
-import { useSimulation } from "hooks/useSimulation";
 import { CMD } from "constants/commands";
-const { ipcRenderer } = window.require("electron");
+import { useTelemetry } from "hooks/useTelemetry";
+import { useTimeControl } from "hooks/useTimeControl";
+import { useSimulation } from "hooks/useSimulation";
+import { useMechanical } from "hooks/useMechanical";
+import { useSerialContext } from "context/SerialContext";
+import { MissionTime } from "./MissionTime";
+import { electronService } from "services/electronService";
 
-const Main = () => {
-  // constants 변수
-  const cmd = CMD;
+const Main: React.FC = () => {
+  // 중앙 서비스
+  const { isConnected, setIsConnected } = useSerialContext();
+  const ipcRenderer = electronService.ipcRenderer;
 
   // ===== UI 상태 =====
   // 현재 탭
@@ -21,21 +25,35 @@ const Main = () => {
   // 데이터 표시 방식
   const [viewMode, setViewMode] = useState<"charts" | "table">("charts");
 
-  // Custom hooks (Hk: Hook)
-  const simulationHk = useSimulation();
+  // Custom Hooks
   const serialHk = useSerial();
-  const timeHk = useTime();
+  const useTel = useTelemetry();
+  const useTime = useTimeControl();
+  const useSim = useSimulation();
+  const useMec = useMechanical();
 
-  // ===== 데이터 =====
-  // 텔레메트리 데이터
-  const [telemetryData, setTelemetryData] = useState<TelemetryData[]>([]);
+  // constants 변수
+  const cmd = CMD;
 
+  // MEC ON 버튼 상태를 관리하기 위함
+  const [isMec, setIsMec] = useState(false);
 
-  const handleSerialError = (_event: any, error: string) => {
-    console.error("Serial error:", error);
-    alert(`Serial Error: ${error}`);
-    serialHk.setIsConnected(false);
-    serialHk.setSelectedPort("");
+  const handleToggleMEC = async () => {
+    if (isConnected) {
+      console.log(`mec status: ${isMec}`);
+      try {
+        if (!isMec) {
+          await ipcRenderer.invoke("send-data", cmd.MEC.ON);
+          setIsMec(true);
+        } else {
+          await ipcRenderer.invoke("send-data", cmd.MEC.OFF);
+          setIsMec(false);
+        }
+      } catch (error) {
+        console.error("Failed to toggle MEC:", error);
+        alert(`MEC 상태 변경 실패\n\nFailed to toggle MEC state`);
+      }
+    }
   };
 
   useEffect(() => {
@@ -44,7 +62,7 @@ const Main = () => {
         const portStatus = await ipcRenderer.invoke("check-port-status");
 
         if (portStatus.isConnected) {
-          serialHk.setIsConnected(true);
+          setIsConnected(true);
           serialHk.setSelectedPort(portStatus.currentPort);
         }
 
@@ -57,8 +75,11 @@ const Main = () => {
 
     getPorts();
 
-    ipcRenderer.on("serial-data", serialHk.handleSerialData(telemetryData, setTelemetryData));
-    ipcRenderer.on("serial-error", handleSerialError);
+    ipcRenderer.on(
+      "serial-data",
+      serialHk.handleSerialData(useTel.telemetryData, useTel.setTelemetryData)
+    );
+    ipcRenderer.on("serial-error", serialHk.handleSerialError);
 
     return () => {
       ipcRenderer.removeAllListeners("serial-data");
@@ -66,8 +87,8 @@ const Main = () => {
     };
   }, []);
 
-  const handleConnect = async () => {
-    if (!serialHk.isConnected && serialHk.selectedPort) {
+  const handleConnectToCanSat = async () => {
+    if (!isConnected && serialHk.selectedPort) {
       try {
         const portStatus = await ipcRenderer.invoke("check-port-status");
         if (
@@ -78,7 +99,7 @@ const Main = () => {
           alert(
             `Another port (${portStatus.currentPort}) is already connected`
           );
-          serialHk.setIsConnected(true);
+          setIsConnected(true);
           serialHk.setSelectedPort(portStatus.currentPort);
           return;
         }
@@ -87,7 +108,7 @@ const Main = () => {
           serialHk.selectedPort
         );
         if (result.success) {
-          serialHk.setIsConnected(true);
+          setIsConnected(true);
           serialHk.setSelectedPort(serialHk.selectedPort);
         } else {
           // alert: 연결 실패: 에러 메시지 출력
@@ -98,11 +119,11 @@ const Main = () => {
         // alert: 연결 중 오류가 발생했습니다.
         alert("An error occurred during connection");
       }
-    } else if (serialHk.isConnected) {
+    } else if (isConnected) {
       try {
         const result = await ipcRenderer.invoke("disconnect-port");
         if (result.success) {
-          serialHk.setIsConnected(false);
+          setIsConnected(false);
           serialHk.setSelectedPort("");
           const ports = await ipcRenderer.invoke("get-ports");
           serialHk.setSerialPorts(ports);
@@ -119,7 +140,7 @@ const Main = () => {
   };
 
   const handleCalToZero = async () => {
-    if (serialHk.isConnected) {
+    if (isConnected) {
       try {
         await ipcRenderer.invoke("send-data", cmd.CAL);
       } catch (error) {
@@ -133,222 +154,19 @@ const Main = () => {
     }
   };
 
-  const handleSetGPSTime = async () => {
-    if (serialHk.isConnected) {
-      try {
-        await ipcRenderer.invoke("send-data", cmd.TIME.GPS);
-        timeHk.setIsToggleTime(false);
-      } catch (error) {
-        console.error("Failed to set GPS time:", error);
-        alert(
-          `GPS 시간 설정 실패
-   
-   Failed to set GPS time`
-        );
-      }
-    }
-  };
-
-  const handleSetUTCTime = async (e: React.FormEvent) => {
-    if (serialHk.isConnected) {
-      try {
-        e.preventDefault();
-        if (timeHk.UTCTime.trim()) {
-          await ipcRenderer.invoke("send-data", cmd.TIME.UTC + timeHk.UTCTime);
-          timeHk.setUTCTime("");
-          timeHk.setIsToggleTime(false);
-        }
-      } catch (error) {
-        console.error("Failed to stop telemetry:", error);
-        alert("텔레메트리 중지 실패");
-      }
-    }
-  };
-
-  const handleToggleTime = () => {
-    if (serialHk.isConnected) {
-      timeHk.setIsToggleTime(true);
-    }
-  };
-
-  const handleToggleMEC = async () => {
-    if (serialHk.isConnected) {
-      try {
-        if (!serialHk.isMec) {
-          await ipcRenderer.invoke("send-data", cmd.MEC.ON);
-          serialHk.setIsMec(true);
-        } else {
-          await ipcRenderer.invoke("send-data", cmd.MEC.OFF);
-          serialHk.setIsMec(false);
-        }
-      } catch (error) {
-        console.error("Failed to stop telemetry:", error);
-        alert("텔레메트리 중지 실패");
-      }
-    }
-  };
-
-  const handleStartTelemetry = async () => {
-    if (serialHk.isConnected) {
-      try {
-        await ipcRenderer.invoke("send-data", cmd.TEL.ON);
-      } catch (error) {
-        console.error("Failed to start telemetry:", error);
-        alert("텔레메트리 시작 실패");
-      }
-    } else {
-      alert("시리얼 포트에 연결되어 있지 않습니다.");
-    }
-  };
-
-  const handleStopTelemetry = async () => {
-    if (serialHk.isConnected) {
-      try {
-        await ipcRenderer.invoke("send-data", cmd.TEL.OFF);
-
-        const saveResult = await ipcRenderer.invoke(
-          "save-telemetry",
-          telemetryData
-        );
-
-        if (saveResult.success) {
-          alert(
-            `텔레메트리 데이터가 저장되었습니다.\n저장 위치: ${saveResult.filePath}`
-          );
-        } else {
-          console.error("텔레메트리 데이터 저장 실패:", saveResult.error);
-          alert("텔레메트리 데이터 저장 실패");
-        }
-      } catch (error) {
-        console.error("텔레메트리 중지 실패:", error);
-        alert("텔레메트리 중지 실패");
-      }
-    }
-  };
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      const text = await file.text();
-
-      // 파일 파싱 (#으로 시작하는 줄과 빈 줄 제외)
-      const commands = text
-        .split("\n")
-        .filter((line) => line.trim() && !line.startsWith("#"))
-        .map((line) => line.replace("$", "3167"));
-
-      simulationHk.setSimFile(commands);
-      simulationHk.setHasValidSimFile(commands.length > 0);
-    }
-  };
-
-  // SIMP 명령 실행을 위한 인터벌 핸들러
-  const startSimulation = async () => {
-    let index = 0;
-
-    simulationHk.intervalRef.current = setInterval(async () => {
-      if (index >= simulationHk.simFile.length) {
-        clearInterval(simulationHk.intervalRef.current!);
-        handleSimDisable(); // 모든 데이터 전송 후 자동 비활성화
-        return;
-      }
-
-      try {
-        await ipcRenderer.invoke("send-data", simulationHk.simFile[index]);
-        index++;
-      } catch (error) {
-        console.error("Failed to send simulation command:", error);
-        clearInterval(simulationHk.intervalRef.current!);
-      }
-    }, 1000);
-  };
-
-  // 버튼 핸들러 수정
-  const handleSimEnable = async () => {
-    if (serialHk.isConnected) {
-      try {
-        await ipcRenderer.invoke("send-data", cmd.SIM.ENABLE);
-        simulationHk.setSimStatus("ENABLED");
-        // 파일 선택 트리거
-        simulationHk.fileInputRef.current?.click();
-      } catch (error) {
-        console.error("Failed to enable simulation:", error);
-        alert("시뮬레이션 모드 활성화 실패");
-      }
-    }
-  };
-
-  const handleSimActivate = async () => {
-    if (serialHk.isConnected && simulationHk.hasValidSimFile) {
-      try {
-        await ipcRenderer.invoke("send-data", cmd.SIM.ACTIVATE);
-        simulationHk.setSimStatus("ACTIVE");
-        startSimulation();
-      } catch (error) {
-        console.error("Failed to activate simulation:", error);
-        alert("시뮬레이션 실행 실패");
-      }
-    }
-  };
-
-  // 시뮬레이션 모드 해제
-  const handleSimDisable = async () => {
-    if (serialHk.isConnected) {
-      try {
-        await ipcRenderer.invoke("send-data", cmd.SIM.DISABLE);
-        simulationHk.setSimStatus("DISABLED");
-        if (simulationHk.intervalRef.current) {
-          clearInterval(simulationHk.intervalRef.current);
-          simulationHk.intervalRef.current = null;
-        }
-      } catch (error) {
-        console.error("Failed to disable simulation:", error);
-        alert("시뮬레이션 모드 비활성화 실패");
-      }
-    }
-  };
-
-  // 시뮬레이션 데이터 전송
-  const handleSendSimData = async (pressureValue: string) => {
-    if (serialHk.isConnected && simulationHk.canReceiveSimData) {
-      try {
-        await ipcRenderer.invoke(
-          "send-data",
-          `${cmd.SIM.PRESSURE}${pressureValue}`
-        );
-      } catch (error) {
-        console.error("Failed to send simulation data:", error);
-        alert("시뮬레이션 데이터 전송 실패");
-      }
-    }
-  };
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      const now = new Date();
-      const formattedTime = `${String(now.getUTCHours()).padStart(2, "0")}:${String(
-        now.getUTCMinutes()
-      ).padStart(2, "0")}:${String(now.getUTCSeconds()).padStart(2, "0")}`;
-      
-      timeHk.setUTCTime(formattedTime);
-    }, 1000);
-    
-    // 컴포넌트 언마운트 시 인터벌 정리
-    return () => {
-      clearInterval(timer);
-    };
-  }, []);
-
   const renderTabContent = () => {
     switch (activeTab) {
       case "telemetry":
-        return <Telemetry viewMode={viewMode} missionData={telemetryData} />;
+        return (
+          <Telemetry viewMode={viewMode} missionData={useTel.telemetryData} />
+        );
       case "cmdecho":
         return <CmdEcho />;
       default:
         return null;
     }
   };
+
   return (
     <div className="flex flex-col h-screen bg-gray-200 font-sans overflow-hidden">
       <header className="flex items-center px-8 py-2 bg-white border-b border-gray-300 h-[70px]">
@@ -361,7 +179,7 @@ const Main = () => {
             value={serialHk.selectedPort}
             onChange={(e) => serialHk.setSelectedPort(e.target.value)}
             className="px-2 py-1 border rounded"
-            disabled={serialHk.isConnected}
+            disabled={isConnected}
           >
             <option value="">포트 선택</option>
             {serialHk.serialPorts.map((port) => (
@@ -371,14 +189,12 @@ const Main = () => {
             ))}
           </select>
           <button
-            onClick={handleConnect}
+            onClick={handleConnectToCanSat}
             className={`px-4 py-1 rounded text-white font-bold hover:bg-blue-800 ${
-              serialHk.isConnected
-                ? "bg-red-600 hover:bg-red-700"
-                : "bg-blue-900"
+              isConnected ? "bg-red-600 hover:bg-red-700" : "bg-blue-900"
             }`}
           >
-            {serialHk.isConnected ? "DISCONNECT" : "CONNECT"}
+            {isConnected ? "DISCONNECT" : "CONNECT"}
           </button>
         </div>
         <p className="text-blue-900 text-lg m-0 ml-4">TEAM ID:3167</p>
@@ -387,35 +203,36 @@ const Main = () => {
       <div className="flex justify-between items-center px-8 py-2 bg-gray-100 border-b border-gray-300 h-[50px]">
         <div className="flex flex-row justify-center items-center gap-4">
           <span>MISSION TIME</span>
-          <span>{`UTC ${timeHk.UTCTime}`}</span>
+          <MissionTime UTCTime={useTime.UTCTime} />
         </div>
 
         <div className="flex gap-4">
-          {!timeHk.isToggleTime && (
+          {!useTime.isToggleTime && (
             <button
               className="px-4 py-2 rounded bg-blue-900 text-white font-bold hover:bg-blue-800"
-              disabled={!serialHk.isConnected}
-              onClick={handleToggleTime}
+              disabled={!isConnected}
+              onClick={useTime.handleToggleTime}
             >
               SET TIME
             </button>
           )}
 
-          {timeHk.isToggleTime && (
+          {useTime.isToggleTime && (
             <div className="flex items-center gap-2">
-              <form onSubmit={handleSetUTCTime} className="flex-1">
+              <form onSubmit={useTime.handleSetUTCTime} className="flex-1">
                 <input
                   type="text"
-                  onChange={(e) => timeHk.setUTCTime(e.target.value)}
-                  value={timeHk.UTCTime}
-                  placeholder="Enter UTC Time"
+                  onChange={useTime.handleTimeInputChange}
+                  value={useTime.UTCTime}
+                  placeholder="Enter UTC Time (hh:mm:ss)"
+                  maxLength={8}
                   className="w-full px-3 py-2 rounded border border-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-900 focus:border-transparent placeholder-gray-400 font-mono"
                 />
               </form>
               <button
                 className="px-4 py-2 rounded bg-blue-900 text-white font-bold hover:bg-blue-800 whitespace-nowrap transition-colors duration-200"
-                disabled={!serialHk.isConnected}
-                onClick={handleSetGPSTime}
+                disabled={!isConnected}
+                onClick={useTime.handleSetGPSTime}
               >
                 SET GPS TIME
               </button>
@@ -423,31 +240,31 @@ const Main = () => {
           )}
           <button
             className="px-4 py-2 rounded bg-blue-900 text-white font-bold hover:bg-blue-800"
-            disabled={!serialHk.isConnected}
+            disabled={!isConnected}
             onClick={handleCalToZero}
           >
             CALIBRATE
           </button>
           <button
             className={`px-4 py-1 rounded text-white font-bold hover:bg-blue-800 ${
-              serialHk.isMec ? "bg-red-600 hover:bg-red-700" : "bg-blue-900"
+              isMec ? "bg-red-600 hover:bg-red-700" : "bg-blue-900"
             }`}
-            disabled={!serialHk.isConnected}
+            disabled={!isConnected}
             onClick={handleToggleMEC}
           >
-            {serialHk.isMec ? "MEC OFF" : "MEC ON"}
+            {isMec ? "MEC OFF" : "MEC ON"}
           </button>
           <button
             className="px-4 py-2 rounded bg-blue-900 text-white font-bold hover:bg-blue-800"
-            onClick={handleStartTelemetry}
-            disabled={!serialHk.isConnected}
+            onClick={useTel.handleStartTelemetry}
+            disabled={!isConnected}
           >
             START TELEMETRY
           </button>
           <button
             className="px-4 py-2 rounded bg-blue-900 text-white font-bold hover:bg-blue-800"
-            onClick={handleStopTelemetry}
-            disabled={!serialHk.isConnected}
+            onClick={useTel.handleStopTelemetry}
+            disabled={!isConnected}
           >
             STOP TELEMETRY
           </button>
@@ -455,7 +272,7 @@ const Main = () => {
 
         <div className="flex items-center gap-2">
           <span>PACKET COUNT</span>
-          <span>: {telemetryData.length}</span>
+          <span>: {useTel.telemetryData.length}</span>
         </div>
       </div>
 
@@ -512,49 +329,73 @@ const Main = () => {
             <div className="mt-2">
               <div className="flex flex-col justify-center items-center bg-gray-100 p-4 gap-2">
                 <p className="m-0">SIMULATION MODE</p>
-                <p className="font-bold m-0">{simulationHk.simStatus}</p>
+                <p className="font-bold m-0">{useSim.simStatus}</p>
                 <div className="flex gap-1">
                   <input
                     type="file"
-                    ref={simulationHk.fileInputRef}
-                    onChange={handleFileUpload}
+                    ref={useSim.fileInputRef}
+                    onChange={useSim.handleFileUpload}
                     className="hidden"
                     accept=".txt"
                   />
                   <button
                     className={`flex-1 p-2 rounded cursor-pointer text-sm ${
-                      simulationHk.simStatus === "ENABLED"
+                      useSim.simStatus === "ENABLED"
                         ? "bg-blue-900 text-white"
                         : "bg-gray-100"
                     }`}
-                    onClick={handleSimEnable}
-                    disabled={!serialHk.isConnected}
+                    onClick={() => {
+                      useSim.handleSimEnable(); // ENABLE 동작 호출
+                      setActiveTab("cmdecho"); // CMD ECHO 탭으로 변경
+                      useSim.fileInputRef.current?.addEventListener(
+                        "change",
+                        () => {
+                          if (useSim.hasValidSimFile) {
+                            //
+                            alert(
+                              "Simulation data is ready to be transmitted.\n시뮬레이션 데이터 전송 준비가 완료되었습니다."
+                            );
+                          }
+                        }
+                      );
+                    }}
+                    disabled={!isConnected}
                   >
                     ENABLE
                   </button>
                   <button
                     className={`flex-1 p-2 rounded cursor-pointer text-sm ${
-                      simulationHk.simStatus === "ACTIVE"
+                      useSim.simStatus === "ACTIVE"
                         ? "bg-blue-900 text-white"
                         : "bg-gray-100"
                     }`}
-                    onClick={handleSimActivate}
+                    onClick={() => {
+                      useSim.handleSimActivate();
+                      alert(
+                        "Simulation data transmission has started.\n시뮬레이션 데이터 전송이 시작되었습니다."
+                      );
+                    }}
                     disabled={
-                      !serialHk.isConnected ||
-                      !simulationHk.hasValidSimFile ||
-                      simulationHk.simStatus !== "ENABLED"
+                      !isConnected ||
+                      !useSim.hasValidSimFile ||
+                      useSim.simStatus !== "ENABLED"
                     }
                   >
                     ACTIVATE
                   </button>
                   <button
                     className={`flex-1 p-2 rounded cursor-pointer text-sm ${
-                      simulationHk.simStatus === "DISABLED"
+                      useSim.simStatus === "DISABLED"
                         ? "bg-blue-900 text-white"
                         : "bg-gray-100"
                     }`}
-                    onClick={handleSimDisable}
-                    disabled={!serialHk.isConnected}
+                    onClick={() => {
+                      useSim.handleSimDisable();
+                      alert(
+                        "Simulation mode is ending.\n시뮬레이션 모드가 종료됩니다."
+                      );
+                    }}
+                    disabled={!isConnected}
                   >
                     DISABLE
                   </button>
@@ -563,32 +404,31 @@ const Main = () => {
 
               <div className="text-sm p-2">
                 {[
-                  [
-                    "STATE:",
-                    serialHk.isConnected ? "CONNECTED" : "DISCONNECTED",
-                  ],
+                  ["STATE:", isConnected ? "CONNECTED" : "DISCONNECTED"],
                   [
                     "GPS TIME:",
-                    telemetryData[telemetryData.length - 1]?.GPS_TIME || "null",
+                    useTel.telemetryData[useTel.telemetryData.length - 1]
+                      ?.GPS_TIME || "null",
                   ],
                   [
                     "GPS LATITUDE:",
-                    telemetryData[telemetryData.length - 1]?.GPS_LATITUDE ||
-                      "null",
+                    useTel.telemetryData[useTel.telemetryData.length - 1]
+                      ?.GPS_LATITUDE || "null",
                   ],
                   [
                     "GPS LONGITUDE:",
-                    telemetryData[telemetryData.length - 1]?.GPS_LONGITUDE ||
-                      "null",
+                    useTel.telemetryData[useTel.telemetryData.length - 1]
+                      ?.GPS_LONGITUDE || "null",
                   ],
                   [
                     "GPS ALTITUDE:",
-                    telemetryData[telemetryData.length - 1]?.GPS_ALTITUDE ||
-                      "null",
+                    useTel.telemetryData[useTel.telemetryData.length - 1]
+                      ?.GPS_ALTITUDE || "null",
                   ],
                   [
                     "GPS SATS:",
-                    telemetryData[telemetryData.length - 1]?.GPS_SATS || "null",
+                    useTel.telemetryData[useTel.telemetryData.length - 1]
+                      ?.GPS_SATS || "null",
                   ],
                 ].map(([label, value]) => (
                   <div
