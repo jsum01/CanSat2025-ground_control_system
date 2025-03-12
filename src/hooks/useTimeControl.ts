@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { CMD } from "constants/commands";
 import { useSerialContext } from "context/SerialContext";
+import { electronService } from "services/electronService";
 
 export const useTimeControl = () => {
  const [isToggleTime, setIsToggleTime] = useState(false);
  const [UTCTime, setUTCTime] = useState("");
- const { isConnected, ipcRenderer } = useSerialContext();
+ const { isConnected } = useSerialContext();
+ const ipcRenderer = electronService.ipcRenderer;
  const cmd = CMD;
 
  // 입력 값 형식화 처리(허용 범위를 초과하면 최대값으로 자동 맞춤)

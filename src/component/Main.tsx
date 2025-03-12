@@ -10,10 +10,12 @@ import { useSimulation } from "hooks/useSimulation";
 import { useMechanical } from "hooks/useMechanical";
 import { useSerialContext } from "context/SerialContext";
 import { MissionTime } from "./MissionTime";
+import { electronService } from "services/electronService";
 
 const Main: React.FC = () => {
   // 중앙 서비스
-  const { isConnected, setIsConnected, ipcRenderer } = useSerialContext();
+  const { isConnected, setIsConnected } = useSerialContext();
+  const ipcRenderer = electronService.ipcRenderer;
 
   // ===== UI 상태 =====
   // 현재 탭
