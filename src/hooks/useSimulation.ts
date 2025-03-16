@@ -1,10 +1,12 @@
 import { useRef, useState } from "react";
 import { CMD } from "constants/commands";
 import { useSerialContext } from "context/SerialContext";
+import { electronService } from "services/electronService";
 
 export const useSimulation = () => {
 
-    const { isConnected, ipcRenderer } = useSerialContext();
+    const { isConnected } = useSerialContext();
+    const ipcRenderer = electronService.ipcRenderer;
 
     const [simStatus, setSimStatus] = useState<
       "DISABLED" | "ENABLED" | "ACTIVE"
@@ -91,7 +93,7 @@ export const useSimulation = () => {
           setSimStatus("DISABLED");
           if (intervalRef.current) {
             clearInterval(intervalRef.current);
-            intervalRef.current = null;
+            intervalRef.current = null; // delete uploaded file
           }
         } catch (error) {
           console.error("Failed to disable simulation:", error);

@@ -75,7 +75,7 @@ Failed to set GPS time`
      try {
        e.preventDefault();
        
-       // 입력값이 올바른 형식인지 확인
+       // 입력값이 올바른 형식인지 확인(재검사(1차 검사는 입력형식을 MissionTime에서 함))
        const timeRegex = /^([0-1][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$/;
        if (UTCTime.trim() && timeRegex.test(UTCTime)) {
          await ipcRenderer.invoke("send-data", cmd.TIME.UTC + UTCTime);

@@ -2,10 +2,12 @@ import { useState } from "react";
 import { TelemetryData } from "types/mission";
 import { CMD } from "constants/commands";
 import { useSerialContext } from "context/SerialContext";
+import { electronService } from "services/electronService";
 
 export const useTelemetry = () => {
   const [telemetryData, setTelemetryData] = useState<TelemetryData[]>([]);
-  const { isConnected, ipcRenderer } = useSerialContext();
+  const { isConnected } = useSerialContext();
+  const ipcRenderer = electronService.ipcRenderer;
 
   const cmd = CMD;
 
