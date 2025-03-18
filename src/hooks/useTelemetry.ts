@@ -15,9 +15,10 @@ export const useTelemetry = () => {
     if (isConnected) {
       try {
         await ipcRenderer.invoke("send-data", cmd.TEL.ON);
+        alert("원격측정 시작\nStart telemetry");
       } catch (error) {
         console.error("Failed to start telemetry:", error);
-        alert("텔레메트리 시작 실패");
+        alert("원격측정 시작 실패");
       }
     } else {
       alert("시리얼 포트에 연결되어 있지 않습니다.");
@@ -36,15 +37,15 @@ export const useTelemetry = () => {
 
         if (saveResult.success) {
           alert(
-            `텔레메트리 데이터가 저장되었습니다.\n저장 위치: ${saveResult.filePath}`
+            `원격측정 데이터가 저장되었습니다.\nRemote telemetry-data is stored.\n\n저장 위치(Saved-Path): ${saveResult.filePath}`
           );
         } else {
-          console.error("텔레메트리 데이터 저장 실패:", saveResult.error);
-          alert("텔레메트리 데이터 저장 실패");
+          console.error("원격측정 데이터 저장 실패:", saveResult.error);
+          alert("원격측정 데이터 저장 실패\n\nTelemetry data storage failure");
         }
       } catch (error) {
-        console.error("텔레메트리 중지 실패:", error);
-        alert("텔레메트리 중지 실패");
+        console.error("원격측정 중지 실패:", error);
+        alert("원격측정 중지 실패\nFailed to stop telemetry");
       }
     }
   };
