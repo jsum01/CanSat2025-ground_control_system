@@ -21,7 +21,6 @@ export const useTelemetry = () => {
 
         // serial 통신 시작
         await ipcRenderer.invoke("send-data", cmd.TEL.ON);
-        alert("원격측정 시작\nStart telemetry");
 
         // 로딩 화면 숨김
         hideLoading();

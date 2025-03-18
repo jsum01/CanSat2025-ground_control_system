@@ -11,19 +11,12 @@ import { useMechanical } from "hooks/useMechanical";
 import { useSerialContext } from "context/SerialContext";
 import { MissionTime } from "./MissionTime";
 import { electronService } from "services/electronService";
+import { useAppState } from "context/AppStateContext";
 
 const Main: React.FC = () => {
   // 중앙 서비스
   const { isConnected, setIsConnected } = useSerialContext();
   const ipcRenderer = electronService.ipcRenderer;
-
-  // ===== UI 상태 =====
-  // 현재 탭
-  const [activeTab, setActiveTab] = useState<"telemetry" | "cmdecho">(
-    "telemetry"
-  );
-  // 데이터 표시 방식
-  const [viewMode, setViewMode] = useState<"charts" | "table">("charts");
 
   // Custom Hooks
   const serialHk = useSerial();
@@ -32,13 +25,21 @@ const Main: React.FC = () => {
   const useSim = useSimulation();
   const useMec = useMechanical();
 
+  const {
+    isMec,
+    setIsMec,
+    isTelemetry,
+    setIsTelemetry,
+    simStatus,
+    setSimStatus,
+    activeTab,
+    setActiveTab,
+    viewMode,
+    setViewMode,
+  } = useAppState();
+
   // constants 변수
   const cmd = CMD;
-
-  // MEC ON 버튼 상태 관리
-  const [isMec, setIsMec] = useState(false);
-  // START/STOP TELEMETRY 버튼 상태 관리
-  const [isTelemetry, setIsTelemetry] = useState(false);
 
   const handleToggleMEC = async () => {
     if (isConnected) {

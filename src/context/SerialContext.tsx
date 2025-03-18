@@ -1,5 +1,4 @@
 import { createContext, useContext, useState } from "react";
-import { electronService } from "services/electronService";
 
 interface SerialContextType {
   isConnected: boolean;
