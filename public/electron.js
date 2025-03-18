@@ -33,9 +33,25 @@ function createWindow() {
   }
 }
 
+const { dialog } = require('electron');
+
 // 텔레메트리 데이터 저장 핸들러
 ipcMain.handle('save-telemetry', async (event, data) => {
   try {
+    // 파일 저장 위치 묻기
+    const result = await dialog.showSaveDialog(mainWindow, {
+      defaultPath: path.join(app.getPath('downloads'), 'Flight_3167.csv'),
+      filters: [
+        { name: 'CSV Files', extensions: ['csv'] }
+      ]
+    });
+
+    // 사용자에게 경로를 물어보고, 경로가 선택되지 않은 경우 종료
+    if (result.canceled || !result.filePath) {
+      console.log('File save canceled');
+      return { success: false, message: 'File save canceled' };
+    }
+
     // CSV 헤더 정의
     const headers = [
       'TEAM_ID', 'MISSION_TIME', 'PACKET_COUNT', 'MODE', 'STATE',
@@ -62,16 +78,12 @@ ipcMain.handle('save-telemetry', async (event, data) => {
       ].join(',');
     });
 
-    // 파일명 생성 (타임스탬프 포함)
-    const fileName = `Flight_3167.csv`;
-    const filePath = path.join(app.getPath('downloads'), fileName);
-
     // CSV 파일 작성
     const csvContent = [headers, ...rows].join('\n');
-    await fs.promises.writeFile(filePath, csvContent);
+    await fs.promises.writeFile(result.filePath, csvContent);
 
-    console.log(`Telemetry data saved successfully to: ${filePath}`);
-    return { success: true, filePath };
+    console.log(`Telemetry data saved successfully to: ${result.filePath}`);
+    return { success: true, filePath: result.filePath };
   } catch (error) {
     console.error('Error saving telemetry data:', error);
     return { success: false, error: error.message };
