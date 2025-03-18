@@ -167,12 +167,39 @@ ipcMain.handle('send-data', async (event, data) => {
     console.error('Cannot send data: Port not connected');
     return { success: false, error: 'Port not connected' };
   }
-  
   try {
     port.write(`${data}\r\n`);
     console.log('Data sent:', data);
     mainWindow.webContents.send('serial-sent', data);
-    return { success: true };
+    // ts 파일 import가 불가능하여 직접 대조
+    if (data === "CMD,3167,ST,GPS") {
+      // GPS 응답을 받을 때까지 기다림
+      return new Promise((resolve, reject) => {
+        port.once('data', (response) => {
+          try {
+            const gpsTime = response.toString().trim(); // 응답을 문자열로 변환
+            console.log("Response GPS Time: ", gpsTime);
+            // 시간 포맷을 체크하거나 응답 형식에 맞게 처리
+            if (/^\d{2}:\d{2}:\d{2}$/.test(gpsTime)) {
+              console.log('Received GPS time:', gpsTime);
+              resolve({ success: true, gpsTime: gpsTime }); // GPS 시간 반환
+            } else {
+              reject(new Error('Invalid GPS time format'));
+            }
+          } catch (error) {
+            reject(error);
+          }
+        });
+
+        // 일정 시간 내에 응답이 오지 않으면 에러 처리 (타임아웃)
+        setTimeout(() => {
+          reject(new Error('GPS time response timeout'));
+        }, 5000); // 5초 동안 응답이 없으면 타임아웃
+      });
+    } else {
+      // 일반 명령은 success만 반환
+      return { success: true };
+    }
   } catch (error) {
     console.error('Error sending data:', error);
     return { success: false, error: error.message };
