@@ -35,8 +35,10 @@ const Main: React.FC = () => {
   // constants 변수
   const cmd = CMD;
 
-  // MEC ON 버튼 상태를 관리하기 위함
+  // MEC ON 버튼 상태 관리
   const [isMec, setIsMec] = useState(false);
+  // START/STOP TELEMETRY 버튼 상태 관리
+  const [isTelemetry, setIsTelemetry] = useState(false);
 
   const handleToggleMEC = async () => {
     if (isConnected) {
@@ -52,6 +54,24 @@ const Main: React.FC = () => {
       } catch (error) {
         console.error("Failed to toggle MEC:", error);
         alert(`MEC 상태 변경 실패\n\nFailed to toggle MEC state`);
+      }
+    }
+  };
+
+  const handleToggleTelemetry = async () => {
+    if (isConnected) {
+      console.log(`telemetry status: ${isTelemetry}`);
+      try {
+        if (!isTelemetry) {
+          useTel.handleStartTelemetry();
+          setIsTelemetry(true);
+        } else {
+          useTel.handleStopTelemetry();
+          setIsTelemetry(false);
+        }
+      } catch (error) {
+        console.error("Failed to toggle TELEMETRY:", error);
+        alert(`TELEMETRY 상태 변경 실패\n\nFailed to toggle TELEMETRY state`);
       }
     }
   };
@@ -203,7 +223,7 @@ const Main: React.FC = () => {
       <div className="flex justify-between items-center px-8 py-2 bg-gray-100 border-b border-gray-300 h-[50px]">
         <div className="flex flex-row justify-center items-center gap-4">
           <span>MISSION TIME</span>
-          <MissionTime UTCTime={useTime.UTCTime} />
+          <MissionTime setTime={useTime.setTime} />
         </div>
 
         <div className="flex gap-4">
@@ -216,21 +236,35 @@ const Main: React.FC = () => {
               SET TIME
             </button>
           )}
-
+          {/* SET TIME 활성화 시 View */}
           {useTime.isToggleTime && (
             <div className="flex items-center gap-2">
-              <form onSubmit={useTime.handleSetUTCTime} className="flex-1">
+              <button
+                onClick={() => useTime.setIsToggleTime(false)}
+                className="px-3 py-2 text-white bg-gray-400 hover:bg-red-500 active:bg-red-600 transition-colors duration-200 font-bold rounded"
+              >
+                ✖
+              </button>
+              {/* 시간 입력 form */}
+              <form onSubmit={(e) => e.preventDefault()} className="flex-1">
                 <input
                   type="text"
                   onChange={useTime.handleTimeInputChange}
-                  value={useTime.UTCTime}
-                  placeholder="Enter UTC Time (hh:mm:ss)"
+                  value={useTime.inputedTime}
+                  placeholder="hh:mm:ss"
                   maxLength={8}
                   className="w-full px-3 py-2 rounded border border-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-900 focus:border-transparent placeholder-gray-400 font-mono"
                 />
               </form>
               <button
-                className="px-4 py-2 rounded bg-blue-900 text-white font-bold hover:bg-blue-800 whitespace-nowrap transition-colors duration-200"
+                className="px-4 py-2 rounded bg-blue-600 text-white font-bold hover:bg-blue-500 transition-all duration-200 shadow-md"
+                disabled={!isConnected}
+                onClick={useTime.handleSetUTCTime}
+              >
+                SET UTC TIME
+              </button>
+              <button
+                className="px-4 py-2 rounded bg-blue-600 text-white font-bold hover:bg-blue-500 transition-all duration-200 shadow-md"
                 disabled={!isConnected}
                 onClick={useTime.handleSetGPSTime}
               >
@@ -255,18 +289,13 @@ const Main: React.FC = () => {
             {isMec ? "MEC OFF" : "MEC ON"}
           </button>
           <button
-            className="px-4 py-2 rounded bg-blue-900 text-white font-bold hover:bg-blue-800"
-            onClick={useTel.handleStartTelemetry}
+            className={`px-4 py-1 rounded text-white font-bold hover:bg-blue-800 ${
+              isTelemetry ? "bg-red-600 hover:bg-red-700" : "bg-blue-900"
+            }`}
             disabled={!isConnected}
+            onClick={handleToggleTelemetry}
           >
-            START TELEMETRY
-          </button>
-          <button
-            className="px-4 py-2 rounded bg-blue-900 text-white font-bold hover:bg-blue-800"
-            onClick={useTel.handleStopTelemetry}
-            disabled={!isConnected}
-          >
-            STOP TELEMETRY
+            {isTelemetry ? "STOP TELEMETRY" : "START TELEMETRY"}
           </button>
         </div>
 
