@@ -1,45 +1,50 @@
 import React, { createContext, useState, useContext, ReactNode, useRef, useEffect } from 'react';
-import { LoadingSpinner } from 'component/LoadingSpinner'; 
+import { LoadingSpinner } from 'component/LoadingSpinner';
 
-type LoadingContextType = {
-  showLoading: (message?: string) => void;
-  hideLoading: () => void;
-  isLoading: boolean;
+// Context가 관리할 상태 타입
+type LoadingState = {
+  loading: boolean;
+  message: string;
+  visibleLoading: boolean;
+  isLoadingRef: React.MutableRefObject<boolean>;
+  timerRef: React.MutableRefObject<NodeJS.Timeout | null>;
+  setLoading: (value: boolean) => void;
+  setMessage: (message: string) => void;
+  setVisibleLoading: (visible: boolean) => void;
 };
 
-const LoadingContext = createContext<LoadingContextType | undefined>(undefined);
+// Context 생성
+const LoadingContext = createContext<LoadingState | undefined>(undefined);
 
 interface LoadingProviderProps {
   children: ReactNode;
-  delay?: number; // 로딩 표시 지연 시간 (밀리초)
+  delay?: number;
 }
 
 export const LoadingProvider: React.FC<LoadingProviderProps> = ({ 
   children, 
-  delay = 500  // 기본값 500ms
+  delay = 500
 }) => {
+  // 상태 관리
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('데이터를 불러오는 중입니다...');
   const [visibleLoading, setVisibleLoading] = useState(false);
   
-  // 타이머 참조를 저장하기 위한 ref
+  // Ref 관리
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  // 현재 로딩 상태 추적을 위한 ref
   const isLoadingRef = useRef(false);
 
-  // 로딩 상태가 변경될 때마다 지연 타이머 관리
+  // 로딩 상태 변경 처리
   useEffect(() => {
     if (loading) {
       isLoadingRef.current = true;
       
-      // 이미 실행 중인 타이머가 있다면 취소
       if (timerRef.current) {
         clearTimeout(timerRef.current);
       }
       
-      // 지정된 지연 시간 후에 로딩 스피너 표시
       timerRef.current = setTimeout(() => {
-        if (isLoadingRef.current) { // 여전히 로딩 중인지 확인
+        if (isLoadingRef.current) {
           setVisibleLoading(true);
         }
       }, delay);
@@ -47,14 +52,12 @@ export const LoadingProvider: React.FC<LoadingProviderProps> = ({
       isLoadingRef.current = false;
       setVisibleLoading(false);
       
-      // 타이머가 있다면 취소
       if (timerRef.current) {
         clearTimeout(timerRef.current);
         timerRef.current = null;
       }
     }
     
-    // 컴포넌트 언마운트 시 타이머 정리
     return () => {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
@@ -62,29 +65,24 @@ export const LoadingProvider: React.FC<LoadingProviderProps> = ({
     };
   }, [loading, delay]);
 
-  const showLoading = (customMessage?: string) => {
-    if (customMessage) {
-      setMessage(customMessage);
-    }
-    setLoading(true);
-  };
-
-  const hideLoading = () => {
-    setLoading(false);
+  // Context 값 정의 - 상태 및 상태 변경 함수만 포함
+  const contextValue: LoadingState = {
+    loading,
+    message,
+    visibleLoading,
+    isLoadingRef,
+    timerRef,
+    setLoading,
+    setMessage,
+    setVisibleLoading
   };
 
   return (
-    <LoadingContext.Provider value={{ showLoading, hideLoading, isLoading: loading }}>
+    <LoadingContext.Provider value={contextValue}>
       {children}
       {visibleLoading && <LoadingSpinner message={message} fullScreen={true} />}
     </LoadingContext.Provider>
   );
 };
 
-export const useLoading = (): LoadingContextType => {
-  const context = useContext(LoadingContext);
-  if (!context) {
-    throw new Error('useLoading must be used within LoadingProvider');
-  }
-  return context;
-};
+export { LoadingContext };
