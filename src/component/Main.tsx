@@ -7,11 +7,12 @@ import { CMD } from "constants/commands";
 import { useTelemetry } from "hooks/useTelemetry";
 import { useTimeControl } from "hooks/useTimeControl";
 import { useSimulation } from "hooks/useSimulation";
-import { useMechanical } from "hooks/useMechanical";
 import { useSerialContext } from "context/SerialContext";
 import { MissionTime } from "./MissionTime";
 import { electronService } from "services/electronService";
 import { useAppState } from "context/AppStateContext";
+import FileInputDialog from "./FileInputDialog";
+import { useFileInput } from "hooks/useFileInput";
 
 const Main: React.FC = () => {
   // 중앙 서비스
@@ -23,15 +24,13 @@ const Main: React.FC = () => {
   const useTel = useTelemetry();
   const useTime = useTimeControl();
   const useSim = useSimulation();
-  const useMec = useMechanical();
+  const useFile = useFileInput();
 
   const {
     isMec,
     setIsMec,
     isTelemetry,
     setIsTelemetry,
-    simStatus,
-    setSimStatus,
     activeTab,
     setActiveTab,
     viewMode,
@@ -361,12 +360,11 @@ const Main: React.FC = () => {
                 <p className="m-0">SIMULATION MODE</p>
                 <p className="font-bold m-0">{useSim.simStatus}</p>
                 <div className="flex gap-1">
-                  <input
-                    type="file"
-                    ref={useSim.fileInputRef}
-                    onChange={useSim.handleFileUpload}
-                    className="hidden"
-                    accept=".txt"
+                  {/* 파일 다이얼로그 컴포넌트 */}
+                  <FileInputDialog
+                    isVisible={useSim.showFileDialog}
+                    onFileSelect={useFile.handleFileSelect} // 함수 참조를 전달 (함수 호출이 아님)
+                    onDialogClose={() => useSim.setShowFileDialog(false)}
                   />
                   <button
                     className={`flex-1 p-2 rounded cursor-pointer text-sm ${
@@ -374,21 +372,7 @@ const Main: React.FC = () => {
                         ? "bg-blue-900 text-white"
                         : "bg-gray-100"
                     }`}
-                    onClick={() => {
-                      useSim.handleSimEnable(); // ENABLE 동작 호출
-                      setActiveTab("cmdecho"); // CMD ECHO 탭으로 변경
-                      useSim.fileInputRef.current?.addEventListener(
-                        "change",
-                        () => {
-                          if (useSim.hasValidSimFile) {
-                            //
-                            alert(
-                              "Simulation data is ready to be transmitted.\n시뮬레이션 데이터 전송 준비가 완료되었습니다."
-                            );
-                          }
-                        }
-                      );
-                    }}
+                    onClick={useSim.handleSimEnable}
                     disabled={!isConnected}
                   >
                     ENABLE
@@ -399,12 +383,7 @@ const Main: React.FC = () => {
                         ? "bg-blue-900 text-white"
                         : "bg-gray-100"
                     }`}
-                    onClick={() => {
-                      useSim.handleSimActivate();
-                      alert(
-                        "Simulation data transmission has started.\n시뮬레이션 데이터 전송이 시작되었습니다."
-                      );
-                    }}
+                    onClick={useSim.handleSimActivate}
                     disabled={
                       !isConnected ||
                       !useSim.hasValidSimFile ||
@@ -419,12 +398,7 @@ const Main: React.FC = () => {
                         ? "bg-blue-900 text-white"
                         : "bg-gray-100"
                     }`}
-                    onClick={() => {
-                      useSim.handleSimDisable();
-                      alert(
-                        "Simulation mode is ending.\n시뮬레이션 모드가 종료됩니다."
-                      );
-                    }}
+                    onClick={useSim.handleSimDisable}
                     disabled={!isConnected}
                   >
                     DISABLE
