@@ -2,7 +2,8 @@ import { useState } from "react";
 import { CMD } from "constants/commands";
 import { useSerialContext } from "context/SerialContext";
 import { electronService } from "services/electronService";
-import { useLoading } from "../context/LoadingContext";
+import { useLoading } from "./useLoading";
+
 
 export const useTimeControl = () => {
   const [isToggleTime, setIsToggleTime] = useState(false); // 시간 설정 모드 활성화 상태

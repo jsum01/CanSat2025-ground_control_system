@@ -3,7 +3,7 @@ import { TelemetryData } from "types/mission";
 import { CMD } from "constants/commands";
 import { useSerialContext } from "context/SerialContext";
 import { electronService } from "services/electronService";
-import { useLoading } from "context/LoadingContext";
+import { useLoading } from "./useLoading";
 
 export const useTelemetry = () => {
   const [telemetryData, setTelemetryData] = useState<TelemetryData[]>([]);

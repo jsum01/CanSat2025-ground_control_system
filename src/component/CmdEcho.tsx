@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from "react";
 import { useMessages } from "./MessageContext";
 import { CMD } from "constants/commands";
 import { useSimulation } from "hooks/useSimulation";
-import { useLoading } from "context/LoadingContext";
 import { useTimeControl } from "hooks/useTimeControl";
 import { electronService } from "services/electronService";
 import { useTelemetry } from "hooks/useTelemetry";
@@ -64,9 +63,9 @@ export const CmdEcho: React.FC = () => {
   // 명령어 전송 처리
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const trimmedInput = input.trim();
+    const inputedCMD = input.trim();
 
-    if (trimmedInput) {
+    if (inputedCMD) {
       // 유효한 명령어 목록 확인
       const validCommands = [
         cmd.TEL.ON,
@@ -81,14 +80,14 @@ export const CmdEcho: React.FC = () => {
       ];
 
       // SIMP와 TIME.UTC 명령어는 접두사 확인
-      const isValidSIMP = trimmedInput.startsWith(cmd.SIMP);
+      const isValidSIMP = inputedCMD.startsWith(cmd.SIMP);
       const isValidTimeUTC =
-        trimmedInput.startsWith(cmd.TIME.UTC) &&
-        trimmedInput.length > cmd.TIME.UTC.length;
+        inputedCMD.startsWith(cmd.TIME.UTC) &&
+        inputedCMD.length > cmd.TIME.UTC.length;
 
       // 유효한 명령어인지 확인
       const isValidCommand =
-        validCommands.includes(trimmedInput) || isValidSIMP || isValidTimeUTC;
+        validCommands.includes(inputedCMD) || isValidSIMP || isValidTimeUTC;
 
       if (!isValidCommand) {
         // 유효하지 않은 명령어일 경우 에러 메시지 출력
@@ -103,44 +102,44 @@ export const CmdEcho: React.FC = () => {
 
       try {
         switch (true) {
-          case trimmedInput === cmd.TEL.ON:
+          case inputedCMD === cmd.TEL.ON:
             await useTel.handleStartTelemetry();
             setIsTelemetry(true);
             break;
-          case trimmedInput === cmd.TEL.OFF:
+          case inputedCMD === cmd.TEL.OFF:
             await useTel.handleStopTelemetry();
             setIsTelemetry(false);
             break;
-          case trimmedInput === cmd.TIME.GPS:
+          case inputedCMD === cmd.TIME.GPS:
             await useTime.handleSetGPSTime();
             break;
           case isValidTimeUTC:
-            const timeValue = trimmedInput.substring(cmd.TIME.UTC.length);
+            const timeValue = inputedCMD.substring(cmd.TIME.UTC.length);
             useTime.setInputedTime(timeValue);
             await useTime.handleSetUTCTime();
             break;
-          case trimmedInput === cmd.SIM.ENABLE:
+          case inputedCMD === cmd.SIM.ENABLE:
             await useSim.handleSimEnable();
             break;
-          case trimmedInput === cmd.SIM.ACTIVATE:
+          case inputedCMD === cmd.SIM.ACTIVATE:
             await useSim.handleSimActivate();
             break;
-          case trimmedInput === cmd.SIM.DISABLE:
-            await useSim.handleSimDisable();
+          case inputedCMD === cmd.SIM.DISABLE:
+            useSim.handleSimDisable();
             break;
-          case trimmedInput === cmd.CAL:
+          case inputedCMD === cmd.CAL:
             handleCalToZero();
             break;
-          case trimmedInput === cmd.MEC.ON:
+          case inputedCMD === cmd.MEC.ON:
             await useMec.sendMecCommand(true);
             setIsMec(true);
             break;
-          case trimmedInput === cmd.MEC.OFF:
+          case inputedCMD === cmd.MEC.OFF:
             await useMec.sendMecCommand(false);
             setIsMec(false);
             break;
           case isValidSIMP:
-            const pressureValue = trimmedInput.substring(cmd.SIMP.length);
+            const pressureValue = inputedCMD.substring(cmd.SIMP.length);
             await useSim.handleSendSimData(pressureValue);
             break;
         }
