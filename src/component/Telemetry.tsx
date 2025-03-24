@@ -17,6 +17,27 @@ const icon = L.icon({
   iconAnchor: [12, 41],
 });
 
+// Units for SI display in table view
+const unitLabels: Record<string, string> = {
+  ALTITUDE: "m",
+  TEMPERATURE: "°C",
+  PRESSURE: "kPa",
+  VOLTAGE: "V",
+  GYRO_R: "°/s",
+  GYRO_P: "°/s",
+  GYRO_Y: "°/s",
+  ACCEL_R: "°/s²",
+  ACCEL_P: "°/s²",
+  ACCEL_Y: "°/s²",
+  MAG_R: "gauss",
+  MAG_P: "gauss",
+  MAG_Y: "gauss",
+  AUTO_GYRO_ROTATION_RATE: "°/s",
+  GPS_ALTITUDE: "m",
+  GPS_LATITUDE: "°N",
+  GPS_LONGITUDE: "°W",
+};
+
 export const Telemetry: React.FC<TelemetryProps> = ({
   viewMode,
   missionData,
@@ -213,6 +234,19 @@ export const Telemetry: React.FC<TelemetryProps> = ({
     }
   }, [viewMode, missionData]);
 
+  // Display value with unit
+  const displayValueWithUnit = (key: string, value: string) => {
+    const unit = unitLabels[key];
+    if (!unit) return value;
+    
+    return (
+      <div className="flex justify-between items-center w-full">
+        <span>{value}</span>
+        <span className="text-gray-500 ml-1">{unit}</span>
+      </div>
+    );
+  };
+
   // GPS 지도 컴포넌트
   const MapComponent = () => (
     <div className="bg-white border border-gray-200 rounded p-2 flex flex-col min-h-0">
@@ -280,7 +314,7 @@ export const Telemetry: React.FC<TelemetryProps> = ({
                         key={key}
                         className="border border-gray-300 p-2 text-left whitespace-nowrap"
                       >
-                        {key}
+                        {key} {unitLabels[key] ? `(${unitLabels[key]})` : ''}
                       </th>
                     ))}
                   </tr>
@@ -299,7 +333,9 @@ export const Telemetry: React.FC<TelemetryProps> = ({
                           key={key}
                           className="border border-gray-300 p-2 text-blue-900 whitespace-nowrap"
                         >
-                          {row[key as keyof TelemetryData]}
+                          {unitLabels[key] 
+                            ? displayValueWithUnit(key, row[key as keyof TelemetryData]) 
+                            : row[key as keyof TelemetryData]}
                         </td>
                       ))}
                     </tr>
