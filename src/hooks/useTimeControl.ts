@@ -14,65 +14,28 @@ export const useTimeControl = () => {
   const cmd = CMD; // 명령어 상수
   const { showLoading, hideLoading } = useLoading(); // 로딩 상태 관리
 
-  // 입력 값 형식화 처리(허용 범위를 초과하면 최대값으로 자동 맞춤)
-  const handleTimeInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-
-    // 숫자와 콜론만 허용
-    const cleaned = value.replace(/[^\d:]/g, "");
-
-    // 형식화 로직 (hh:mm:ss)
-    let formatted = "";
-    const digits = cleaned.replace(/:/g, "");
-
-    if (digits.length > 0) {
-      // 시간 (00-23)
-      const hours = digits.substring(0, Math.min(2, digits.length));
-      if (hours.length === 2 && parseInt(hours) > 23) {
-        formatted += "23";
-      } else {
-        formatted += hours;
-      }
-
-      if (digits.length > 2) {
-        // 분 (00-59)
-        const minutes = digits.substring(2, Math.min(4, digits.length));
-        if (minutes.length === 2 && parseInt(minutes) > 59) {
-          formatted += ":59";
-        } else {
-          formatted += ":" + minutes;
-        }
-
-        if (digits.length > 4) {
-          // 초 (00-59)
-          const seconds = digits.substring(4, Math.min(6, digits.length));
-          if (seconds.length === 2 && parseInt(seconds) > 59) {
-            formatted += ":59";
-          } else {
-            formatted += ":" + seconds;
-          }
-        }
-      }
-    }
-
-    setInputedTime(formatted);
-    // 여기서는 setTime을 업데이트하지 않음
-  };
-
+  /**
+   * 현재 UTC 시간을 받아와서 전송
+   */
   const handleSetUTCTime = async () => {
     if (isConnected) {
       try {
-        // 입력값이 올바른 형식인지 재확인
         const timeRegex = /^([0-1][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$/;
-        if (inputedTime.trim() && timeRegex.test(inputedTime)) {
+        const date = new Date();
+        const utcTime = `${String(date.getUTCHours()).padStart(2, '0')}:${String(date.getUTCMinutes()).padStart(2, '0')}:${String(date.getUTCSeconds()).padStart(2, '0')}`;
+        console.log(`가져온 UTC TIME: ${utcTime}`) // DEBUG
+
+        if (utcTime.trim() && timeRegex.test(utcTime)) { // REGEX TEST
+          console.log(`UTC 형식 테스트 성공`) // DEBUG
           // 로딩 표시 시작
           showLoading("UTC 시간을 설정 중입니다...");
           
           // 1. 시리얼 통신: UTC 명령 send
-          await ipcRenderer.invoke("send-data", cmd.TIME.UTC + inputedTime);
+          await ipcRenderer.invoke("send-data", cmd.TIME.UTC + utcTime);
+          console.log("전송 완료") // DEBUG
           
           // 2. 입력한 시간으로 프로그램 시간 동기화
-          setSetTime(inputedTime);
+          setSetTime(utcTime);
           setIsToggleTime(false);
           
           // 로딩 표시 종료
@@ -149,7 +112,6 @@ export const useTimeControl = () => {
     inputedTime,
     setInputedTime,
     setTime,
-    handleTimeInputChange,
     handleSetGPSTime,
     handleSetUTCTime,
     handleToggleTime,

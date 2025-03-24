@@ -245,17 +245,6 @@ const Main: React.FC = () => {
               >
                 ✖
               </button>
-              {/* 시간 입력 form */}
-              <form onSubmit={(e) => e.preventDefault()} className="flex-1">
-                <input
-                  type="text"
-                  onChange={useTime.handleTimeInputChange}
-                  value={useTime.inputedTime}
-                  placeholder="hh:mm:ss"
-                  maxLength={8}
-                  className="w-full px-3 py-2 rounded border border-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-900 focus:border-transparent placeholder-gray-400 font-mono"
-                />
-              </form>
               <button
                 className="px-4 py-2 rounded bg-blue-600 text-white font-bold hover:bg-blue-500 transition-all duration-200 shadow-md"
                 disabled={!isConnected}
