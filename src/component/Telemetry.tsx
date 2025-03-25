@@ -1,21 +1,32 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Chart } from "chart.js/auto";
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { TelemetryData } from "../types/mission";
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
 
 interface TelemetryProps {
   viewMode: "charts" | "table";
   missionData: TelemetryData[];
 }
 
-// 마커 아이콘 설정 - Leaflet의 기본 마커 아이콘 사용
-const icon = L.icon({
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-});
+// Units for SI display in table view
+const unitLabels: Record<string, string> = {
+  ALTITUDE: "m",
+  TEMPERATURE: "°C",
+  PRESSURE: "kPa",
+  VOLTAGE: "V",
+  GYRO_R: "°/s",
+  GYRO_P: "°/s",
+  GYRO_Y: "°/s",
+  ACCEL_R: "°/s²",
+  ACCEL_P: "°/s²",
+  ACCEL_Y: "°/s²",
+  MAG_R: "gauss",
+  MAG_P: "gauss",
+  MAG_Y: "gauss",
+  AUTO_GYRO_ROTATION_RATE: "°/s",
+  GPS_ALTITUDE: "m",
+  GPS_LATITUDE: "°N",
+  GPS_LONGITUDE: "°W",
+};
 
 export const Telemetry: React.FC<TelemetryProps> = ({
   viewMode,
@@ -213,31 +224,18 @@ export const Telemetry: React.FC<TelemetryProps> = ({
     }
   }, [viewMode, missionData]);
 
-  // GPS 지도 컴포넌트
-  const MapComponent = () => (
-    <div className="bg-white border border-gray-200 rounded p-2 flex flex-col min-h-0">
-      <h3 className="m-0 mb-2 text-sm text-blue-900">GPS Location</h3>
-      <div className="flex-1 min-h-0 relative">
-        <MapContainer
-          center={position}
-          zoom={13}
-          style={{ height: "100%", width: "100%" }}
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          <Marker position={position} icon={icon}>
-            <Popup>
-              Current Location<br />
-              Lat: {position[0]}<br />
-              Lng: {position[1]}
-            </Popup>
-          </Marker>
-        </MapContainer>
+  // Display value with unit
+  const displayValueWithUnit = (key: string, value: string) => {
+    const unit = unitLabels[key];
+    if (!unit) return value;
+    
+    return (
+      <div className="flex justify-between items-center w-full">
+        <span>{value}</span>
+        <span className="text-gray-500 ml-1">{unit}</span>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <>
@@ -262,7 +260,7 @@ export const Telemetry: React.FC<TelemetryProps> = ({
               </div>
             </div>
           ))}
-          <MapComponent />
+          
         </div>
       ) : (
         <div className="w-full h-full">
@@ -280,7 +278,7 @@ export const Telemetry: React.FC<TelemetryProps> = ({
                         key={key}
                         className="border border-gray-300 p-2 text-left whitespace-nowrap"
                       >
-                        {key}
+                        {key} {unitLabels[key] ? `(${unitLabels[key]})` : ''}
                       </th>
                     ))}
                   </tr>
@@ -299,7 +297,9 @@ export const Telemetry: React.FC<TelemetryProps> = ({
                           key={key}
                           className="border border-gray-300 p-2 text-blue-900 whitespace-nowrap"
                         >
-                          {row[key as keyof TelemetryData]}
+                          {unitLabels[key] 
+                            ? displayValueWithUnit(key, row[key as keyof TelemetryData]) 
+                            : row[key as keyof TelemetryData]}
                         </td>
                       ))}
                     </tr>
