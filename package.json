@@ -14,7 +14,17 @@
     "start-forge": "electron-forge start",
     "package-forge": "electron-forge package",
     "make-forge": "electron-forge make",
-    "build-and-make": "npm run build && cp -r build ./public/ && npm run make-forge",
+    
+    "make-mac": "electron-forge make --platform=darwin",
+    "make-win": "electron-forge make --platform=win32 --arch=x64 --targets=@electron-forge/maker-zip",
+    "make-win-installer": "electron-forge make --platform=win32 --arch=x64 --targets=@electron-forge/maker-squirrel",
+    "make-linux": "electron-forge make --platform=linux",
+    
+    "build-and-make-all": "npm run build && cp -r build ./public/ && npm run make-mac && npm run make-win && npm run make-linux",
+    "build-and-make-mac": "npm run build && cp -r build ./public/ && npm run make-mac",
+    "build-and-make-win": "npm run build && cp -r build ./public/ && npm run make-win",
+    "build-and-make-linux": "npm run build && cp -r build ./public/ && npm run make-linux",
+    
     "dev": "npm run electron:dev"
   },
   "dependencies": {
