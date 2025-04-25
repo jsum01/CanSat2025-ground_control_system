@@ -400,3 +400,5 @@ $RECYCLE.BIN/
 # Custom Ignore files -------------
 
 yarn.lock
+package-lock.json
+yarn.lock
