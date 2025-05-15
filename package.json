@@ -7,21 +7,27 @@
   "homepage": "./",
   "scripts": {
     "start": "cross-env NODE_OPTIONS=--openssl-legacy-provider BROWSER=none react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
+    "dev": "concurrently \"cross-env NODE_OPTIONS=--openssl-legacy-provider BROWSER=none HOST=127.0.0.1 yarn start\" \"wait-on http://localhost:3000 && cross-env ELECTRON_START_URL=http://localhost:3000 electron .\"",
     "electron": "electron .",
-    "electron:dev": "concurrently \"NODE_OPTIONS=--openssl-legacy-provider BROWSER=none HOST=127.0.0.1 yarn start\" \"wait-on http://localhost:3000 && ELECTRON_START_URL=http://localhost:3000 electron .\"",
-    "start-forge": "electron-forge start",
-    "package-forge": "electron-forge package",
-    "make": "npm run build && cp -r build ./public/ && electron-forge make",
-    "make-win32": "rm -rf out/win32 && npm run build && cp -r build ./public/ && electron-forge make --platform=win32 --arch=ia32 --out=out/win32 --targets=@electron-forge/maker-zip",
-    "make-win64": "rm -rf out/win64 && npm run build && cp -r build ./public/ && electron-forge make --platform=win32 --arch=x64 --out=out/win64 --targets=@electron-forge/maker-zip",
-    "make-mac": "rm -rf out/mac && npm run build && cp -r build ./public/ && electron-forge make --platform=darwin --out=out/mac",
-    "dev": "npm run electron:dev",
+
+    "test": "react-scripts test",
+
+    "build": "react-scripts build",
     "clean": "rimraf build out node_modules/.cache",
-    "rebuild-mac": "npm run clean && npm run make-mac",
+    "postbuild": "xcopy build public\\ /E /I /Y",
+
+    "package": "electron-forge package",
+
+    "make-win32": "rimraf out/win32 && npm run build && electron-forge make --platform=win32 --arch=ia32 --out=out/win32 --targets=@electron-forge/maker-zip",
+    "make-win64": "rimraf out/win64 && npm run build && electron-forge make --platform=win32 --arch=x64 --out=out/win64 --targets=@electron-forge/maker-zip",
+
+    "make-mac": "rimraf out/mac && npm run build && electron-forge make --platform=darwin --out=out/mac",
+    
+    "make-all": "npm run clean && npm run make-win64 && npm run make-win32 && npm run make-mac",
+
+    "rebuild-win64": "npm run clean && npm run make-win64",
     "rebuild-win32": "npm run clean && npm run make-win32",
-    "rebuild-win64": "npm run clean && npm run make-win64"
+    "rebuild-mac": "npm run clean && npm run make-mac"
   },
   "dependencies": {
     "@serialport/parser-readline": "^13.0.0",
