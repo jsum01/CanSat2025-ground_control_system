@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import logo from "../static/images/cosmoLink.jpeg";
 import { Telemetry } from "./Telemetry";
 import { CmdEcho } from "./CmdEcho";
+import { CsvVisualizer } from "./CsvVisualizer";
 import { useSerial } from "hooks/useSerial";
 import { CMD } from "constants/commands";
 import { useTelemetry } from "hooks/useTelemetry";
@@ -36,6 +37,9 @@ const Main: React.FC = () => {
     viewMode,
     setViewMode,
   } = useAppState();
+
+  // CSV 시각화 상태
+  const [showCsvVisualizer, setShowCsvVisualizer] = useState(false);
 
   // constants 변수
   const cmd = CMD;
@@ -314,15 +318,25 @@ const Main: React.FC = () => {
           ))}
         </div>
 
-        {/* 개선된 레이아웃: 고정 너비와 오버플로우 처리 */}
-        <div className="flex gap-4 flex-1 min-h-0 overflow-hidden">
-          {/* 메인 콘텐츠 영역 - 너비 제한과 오버플로우 처리 */}
-          <div className="flex-1 bg-white rounded-lg shadow-md p-4 flex min-h-0 min-w-0 overflow-hidden">
+        {/* CSS Grid 레이아웃으로 확실한 크기 제어 */}
+        <div 
+          className="flex-1 min-h-0 overflow-hidden"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 250px',
+            gap: '16px'
+          }}
+        >
+          {/* 메인 콘텐츠 영역 - Grid로 크기 완전 제어 */}
+          <div 
+            className="bg-white rounded-lg shadow-md p-4 flex overflow-hidden"
+            style={{ minWidth: 0 }}
+          >
             {renderTabContent()}
           </div>
 
-          {/* 사이드바 - 고정 너비와 flex-shrink-0으로 크기 보장 */}
-          <div className="w-[250px] flex-shrink-0 bg-white p-4 rounded-lg shadow-md flex flex-col overflow-hidden">
+          {/* 사이드바 - Grid로 250px 고정 */}
+          <div className="bg-white p-4 rounded-lg shadow-md flex flex-col overflow-hidden">
             {activeTab != "cmdecho" && (
               <>
                 <button
@@ -399,6 +413,20 @@ const Main: React.FC = () => {
                 </div>
               </div>
 
+              {/* CSV 시각화 섹션 추가 */}
+              <div className="mt-4 flex flex-col justify-center items-center bg-gray-100 p-4 gap-2">
+                <p className="m-0 text-center font-medium">DATA VISUALIZATION</p>
+                <p className="text-xs text-gray-600 text-center m-0">
+                  Visualize CSV as charts
+                </p>
+                <button
+                  className="w-full p-2 rounded cursor-pointer text-sm bg-purple-600 text-white hover:bg-purple-700 transition-colors"
+                  onClick={() => setShowCsvVisualizer(true)}
+                >
+                  📊 CSV VISUALIZATION
+                </button>
+              </div>
+
               <div className="text-sm p-2">
                 {[
                   ["STATE:", isConnected ? "CONNECTED" : "DISCONNECTED"],
@@ -441,6 +469,12 @@ const Main: React.FC = () => {
           </div>
         </div>
       </div>
+      
+      {/* CSV 시각화 모달 */}
+      <CsvVisualizer 
+        isVisible={showCsvVisualizer} 
+        onClose={() => setShowCsvVisualizer(false)} 
+      />
     </div>
   );
 };
