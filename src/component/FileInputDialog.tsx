@@ -11,7 +11,7 @@ const FileInputDialog: React.FC<FileInputDialogProps> = ({
   isVisible, 
   onFileSelect, 
   onDialogClose,
-  accept = ".txt" 
+  accept = ".txt,.csv" // 기본값을 txt와 csv 모두 허용하도록 변경
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   

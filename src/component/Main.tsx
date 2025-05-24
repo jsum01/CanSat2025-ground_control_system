@@ -314,12 +314,15 @@ const Main: React.FC = () => {
           ))}
         </div>
 
-        <div className="flex gap-4 flex-1 min-h-0">
-          <div className="flex-1 bg-white rounded-lg shadow-md p-4 flex min-h-0">
+        {/* 개선된 레이아웃: 고정 너비와 오버플로우 처리 */}
+        <div className="flex gap-4 flex-1 min-h-0 overflow-hidden">
+          {/* 메인 콘텐츠 영역 - 너비 제한과 오버플로우 처리 */}
+          <div className="flex-1 bg-white rounded-lg shadow-md p-4 flex min-h-0 min-w-0 overflow-hidden">
             {renderTabContent()}
           </div>
 
-          <div className="w-[250px] bg-white p-4 rounded-lg shadow-md flex flex-col">
+          {/* 사이드바 - 고정 너비와 flex-shrink-0으로 크기 보장 */}
+          <div className="w-[250px] flex-shrink-0 bg-white p-4 rounded-lg shadow-md flex flex-col overflow-hidden">
             {activeTab != "cmdecho" && (
               <>
                 <button
@@ -344,7 +347,7 @@ const Main: React.FC = () => {
                 </button>
               </>
             )}
-            <div className="mt-2">
+            <div className="mt-2 overflow-auto">
               <div className="flex flex-col justify-center items-center bg-gray-100 p-4 gap-2">
                 <p className="m-0">SIMULATION MODE</p>
                 <p className="font-bold m-0">{useSim.simStatus}</p>
@@ -354,9 +357,10 @@ const Main: React.FC = () => {
                     isVisible={useSim.showFileDialog}
                     onFileSelect={useFile.handleFileSelect} // 함수 참조를 전달 (함수 호출이 아님)
                     onDialogClose={() => useSim.setShowFileDialog(false)}
+                    accept=".txt,.csv"
                   />
                   <button
-                    className={`flex-1 p-2 rounded cursor-pointer text-sm ${
+                    className={`flex-1 p-2 rounded cursor-pointer text-xs ${
                       useSim.simStatus === "ENABLED"
                         ? "bg-blue-900 text-white"
                         : "bg-gray-100"
@@ -367,7 +371,7 @@ const Main: React.FC = () => {
                     ENABLE
                   </button>
                   <button
-                    className={`flex-1 p-2 rounded cursor-pointer text-sm ${
+                    className={`flex-1 p-2 rounded cursor-pointer text-xs ${
                       useSim.simStatus === "ACTIVE"
                         ? "bg-blue-900 text-white"
                         : "bg-gray-100"
@@ -382,7 +386,7 @@ const Main: React.FC = () => {
                     ACTIVATE
                   </button>
                   <button
-                    className={`flex-1 p-2 rounded cursor-pointer text-sm ${
+                    className={`flex-1 p-2 rounded cursor-pointer text-xs ${
                       useSim.simStatus === "DISABLED"
                         ? "bg-blue-900 text-white"
                         : "bg-gray-100"
@@ -428,8 +432,8 @@ const Main: React.FC = () => {
                     key={label}
                     className="flex justify-between mb-2 pb-2 border-b border-gray-200"
                   >
-                    <span className="text-blue-900 font-bold">{label}</span>
-                    <span>{value}</span>
+                    <span className="text-blue-900 font-bold break-all">{label}</span>
+                    <span className="break-all ml-2 text-right">{value}</span>
                   </div>
                 ))}
               </div>
