@@ -162,25 +162,44 @@ export const CmdEcho: React.FC = () => {
   }, [messages]);
 
   return (
-    // 터미널 스타일 UI 구현 (중복 div 제거)
-    <div className="w-full h-full flex flex-col bg-white text-black-400 font-mono border-2 border-blue-900 rounded-lg">
+    // 터미널 스타일 UI 구현 - 가로 스크롤 처리
+    <div className="w-full h-full flex flex-col bg-white text-black-400 font-mono border-2 border-blue-900 rounded-lg overflow-hidden">
       {/* 메시지 표시 영역 */}
-      <div className="flex-1 p-4 overflow-auto">
+      <div 
+        className="flex-1 p-4 overflow-auto"
+        style={{ 
+          minWidth: 0,
+          maxWidth: '100%'
+        }}
+      >
         {messages.map((msg, index) => (
-          <div key={index} className="mb-2 whitespace-pre-wrap">
+          <div 
+            key={index} 
+            className="mb-2"
+            style={{
+              whiteSpace: 'pre',
+              overflowWrap: 'normal',
+              wordWrap: 'normal',
+              fontSize: '13px',
+              lineHeight: '1.4',
+            }}
+          >
             {msg}
           </div>
         ))}
         <div ref={messageEndRef} />
       </div>
       {/* 명령어 입력 폼 */}
-      <form onSubmit={handleSubmit} className="p-4 bg-blue-900 rounded-b-lg">
+      <form onSubmit={handleSubmit} className="p-4 bg-blue-900 rounded-b-lg flex-shrink-0">
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           className="w-full px-3 py-2 bg-white text-black-400 font-mono border border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
           placeholder="Enter command..."
+          style={{
+            fontSize: '15px',
+          }}
         />
       </form>
     </div>
