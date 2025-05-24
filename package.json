@@ -9,22 +9,15 @@
     "start": "cross-env NODE_OPTIONS=--openssl-legacy-provider BROWSER=none react-scripts start",
     "dev": "concurrently \"cross-env NODE_OPTIONS=--openssl-legacy-provider BROWSER=none HOST=127.0.0.1 yarn start\" \"wait-on http://localhost:3000 && cross-env ELECTRON_START_URL=http://localhost:3000 electron .\"",
     "electron": "electron .",
-
     "test": "react-scripts test",
-
     "build": "react-scripts build",
     "clean": "rimraf build out node_modules/.cache",
     "postbuild": "xcopy build public\\ /E /I /Y",
-
     "package": "electron-forge package",
-
     "make-win32": "rimraf out/win32 && npm run build && electron-forge make --platform=win32 --arch=ia32 --out=out/win32 --targets=@electron-forge/maker-zip",
     "make-win64": "rimraf out/win64 && npm run build && electron-forge make --platform=win32 --arch=x64 --out=out/win64 --targets=@electron-forge/maker-zip",
-
     "make-mac": "rimraf out/mac && npm run build && electron-forge make --platform=darwin --out=out/mac",
-    
     "make-all": "npm run clean && npm run make-win64 && npm run make-win32 && npm run make-mac",
-
     "rebuild-win64": "npm run clean && npm run make-win64",
     "rebuild-win32": "npm run clean && npm run make-win32",
     "rebuild-mac": "npm run clean && npm run make-mac"
@@ -53,6 +46,7 @@
     "react-router-dom": "^5.2.0",
     "serialport": "^13.0.0",
     "styled-components": "^5.2.1",
+    "three": "^0.176.0",
     "yarn": "^1.22.22"
   },
   "eslintConfig": {

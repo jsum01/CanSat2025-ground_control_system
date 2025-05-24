@@ -1798,9 +1798,9 @@
     global-agent "^3.0.0"
 
 "@electron/node-gyp@git+https://github.com/electron/node-gyp.git#06b29aafb7708acef8b3669835c8a7857ebc92d2":
-  version "10.2.0-electron.2"
-  resolved "git+ssh://git@github.com/electron/node-gyp.git"
-  integrity sha512-4kVNAy/cQ8Lno6jd7k1mEmyDPjCPG6j3zTV4wNFcE2Cue0kdG0MpS9FcK29qg1c+5LEDg3d10VGYXWtImyGWrw==
+  version "10.2.0-electron.1"
+  resolved "git+ssh://git@github.com/electron/node-gyp.git#06b29aafb7708acef8b3669835c8a7857ebc92d2"
+  integrity sha512-lBSgDMQqt7QWMuIjS8zNAq5FI5o5RVBAcJUGWGI6GgoQITJt3msAkUrHp8YHj3RTVE+h70ndqMGqURjp3IfRyQ==
   dependencies:
     env-paths "^2.2.0"
     exponential-backoff "^3.1.1"
@@ -12449,6 +12449,11 @@ thenify-all@^1.0.0:
   integrity sha512-RVZSIV5IG10Hk3enotrhvz0T9em6cyHBLkH/YAZuKqd8hRkKhSfCGIcP2KUY0EPxndzANBmNllzWPwak+bheSw==
   dependencies:
     any-promise "^1.0.0"
+
+three@^0.176.0:
+  version "0.176.0"
+  resolved "https://registry.npmjs.org/three/-/three-0.176.0.tgz"
+  integrity sha512-PWRKYWQo23ojf9oZSlRGH8K09q7nRSWx6LY/HF/UUrMdYgN9i1e2OwJYHoQjwc6HF/4lvvYLC5YC1X8UJL2ZpA==
 
 throat@^6.0.1:
   version "6.0.2"
