@@ -33,9 +33,11 @@ export const useSerial = () => {
           .split(",")
           .map((value) => value.trim());
 
-        // 데이터 검증을 위한 기본 체크
-        if (values.length < 24) {
+        // 데이터 검증을 위한 기본 체크 - 25개 필드로 수정
+        if (values.length < 25) {
           console.warn("Insufficient number of fields in telemetry data");
+          console.log(`Expected 25 fields, but got ${values.length}`);
+          console.log("Raw data:", data);
           return;
         }
 
@@ -77,13 +79,13 @@ export const useSerial = () => {
           MAG_R: values[15],
           MAG_P: values[16],
           MAG_Y: values[17],
-          AUTO_GYRO_ROTATION_RATE: "0", // This field is not present in the incoming data
-          GPS_TIME: values[18],
-          GPS_ALTITUDE: values[19],
-          GPS_LATITUDE: values[20],
-          GPS_LONGITUDE: values[21],
-          GPS_SATS: values[22],
-          CMD_ECHO: values[23],
+          AUTO_GYRO_ROTATION_RATE: values[18], // 수정: 실제 데이터에서 가져오기
+          GPS_TIME: values[19], // 수정: 19번 인덱스로 변경
+          GPS_ALTITUDE: values[20], // 수정: 20번 인덱스로 변경
+          GPS_LATITUDE: values[21], // 수정: 21번 인덱스로 변경
+          GPS_LONGITUDE: values[22], // 수정: 22번 인덱스로 변경
+          GPS_SATS: values[23], // 수정: 23번 인덱스로 변경
+          CMD_ECHO: values[24], // 수정: 24번 인덱스로 변경
         };
 
         if (!parsedData.TEAM_ID || !parsedData.MISSION_TIME) {
