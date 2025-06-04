@@ -302,7 +302,6 @@ yarn.lock
 build/
 dist/
 out/
-preload.js
 
 # log
 *.log
