@@ -1,3 +1,4 @@
+// public/electron.js
 const path = require("path");
 const { app, BrowserWindow, ipcMain } = require("electron");
 const { SerialPort } = require("serialport");
@@ -191,11 +192,24 @@ ipcMain.handle("connect-port", async (event, portPath) => {
       baudRate: 9600,
     });
 
-    // 데이터 파서 설정
+    console.log("🔧 파서 디버깅 시작...");
+
+    // 원시 데이터 수신 확인
+    port.on('data', (data) => {
+      console.log("🔴 RAW DATA RECEIVED! Length:", data.length, "Content:", data.toString());
+    });
+
+    // 파서 설정
     const parser = port.pipe(new ReadlineParser());
     parser.on("data", (message) => {
-      console.log("Received data:", message);
+      console.log("🟢 PARSER SUCCESS! Message:", message);
       mainWindow.webContents.send("serial-data", message);
+    });
+
+    // 파서 에러 처리
+    parser.on('error', (err) => {
+      console.log("❌ PARSER FAILED! Error:", err);
+      console.error("❌ PARSER FAILED! Error:", err);
     });
 
     // 에러 핸들링
