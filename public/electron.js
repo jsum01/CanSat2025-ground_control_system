@@ -25,7 +25,7 @@ function createWindow() {
       contextIsolation: false,
       preload: path.join(
         getAppPath(),
-        app.isPackaged ? "preload.js" : "public/preload.js"
+        app.isPackaged ? "public/preload.js" : "preload.js"
       ),
     },
   });
