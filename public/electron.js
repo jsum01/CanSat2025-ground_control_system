@@ -192,16 +192,18 @@ ipcMain.handle("connect-port", async (event, portPath) => {
       baudRate: 9600,
     });
 
-    console.log("🔧 파서 디버깅 시작...");
-
     // 원시 데이터 수신 확인
     port.on('data', (data) => {
       console.log("🔴 RAW DATA RECEIVED! Length:", data.length, "Content:", data.toString());
     });
 
+    const parser = port.pipe(new ReadlineParser({ 
+      delimiter: ['\r\n', '\r', '\n'],  // 여러 구분자 지원
+      includeDelimiter: false           // 구분자 제거
+    }));
+
     // 파서 설정
-    const parser = port.pipe(new ReadlineParser());
-    parser.on("data", (message) => {
+    parser.on('data', (message) => {
       console.log("🟢 PARSER SUCCESS! Message:", message);
       mainWindow.webContents.send("serial-data", message);
     });
@@ -213,7 +215,7 @@ ipcMain.handle("connect-port", async (event, portPath) => {
     });
 
     // 에러 핸들링
-    port.on("error", (err) => {
+    port.on('error', (err) => {
       console.error("Serial port error:", err);
       mainWindow.webContents.send("serial-error", err.message);
     });

@@ -14,7 +14,7 @@ export const useSerial = () => {
   // GPS 좌표 변환 함수: 도분(DDMM.MMMM) → 십진도(DD.DDDDDD)
   const convertGPSCoordinate = (coordinate: string, isLongitude: boolean = false): string => {
     const numValue = parseFloat(coordinate);
-    if (isNaN(numValue) || numValue === 0) return coordinate; // 유효하지 않거나 0이면 원본 반환
+    if (isNaN(numValue) || numValue === 0) return coordinate;
 
     const coordinateStr = coordinate.toString();
     const dotIndex = coordinateStr.indexOf('.');
@@ -23,26 +23,123 @@ export const useSerial = () => {
     let minutes: number;
     
     if (isLongitude) {
-      // 경도: DDDMM.MMMM 형식 (3자리 도)
-      if (dotIndex >= 5) { // 12924.9219 형식
-        degrees = Math.floor(numValue / 100); // 129
-        minutes = numValue - (degrees * 100); // 24.9219
+      if (dotIndex >= 5) {
+        degrees = Math.floor(numValue / 100);
+        minutes = numValue - (degrees * 100);
       } else {
-        return coordinate; // 형식이 맞지 않으면 원본 반환
+        return coordinate;
       }
     } else {
-      // 위도: DDMM.MMMM 형식 (2자리 도)
-      if (dotIndex >= 4) { // 3529.6748 형식
-        degrees = Math.floor(numValue / 100); // 35
-        minutes = numValue - (degrees * 100); // 29.6748
+      if (dotIndex >= 4) {
+        degrees = Math.floor(numValue / 100);
+        minutes = numValue - (degrees * 100);
       } else {
-        return coordinate; // 형식이 맞지 않으면 원본 반환
+        return coordinate;
       }
     }
     
     const decimalDegrees = degrees + (minutes / 60);
-    
-    return decimalDegrees.toFixed(4); // 소수점 4자리까지
+    return decimalDegrees.toFixed(4);
+  };
+
+  // 텔레메트리 데이터 유효성 검사 함수 (분리)
+  const validateTelemetryData = (data: string): { isValid: boolean; parsedData?: TelemetryData; errorReason?: string } => {
+    try {
+      const values = data
+        .trim()
+        .split(",")
+        .map((value) => value.trim());
+
+      // 기본 필드 수 검사
+      if (values.length < 25) {
+        return {
+          isValid: false,
+          errorReason: `Insufficient fields: expected 25, got ${values.length}`
+        };
+      }
+
+      // MODE 검증
+      if (values[3] !== "F" && values[3] !== "S") {
+        return {
+          isValid: false,
+          errorReason: `Invalid MODE: ${values[3]} (expected F or S)`
+        };
+      }
+
+      // STATE 검증
+      const validStates = [
+        "LAUNCH_WAIT",
+        "LAUNCH_PAD", 
+        "ASCENT",
+        "APOGEE",
+        "DESCENT",
+        "PROBE_RELEASE",
+        "LANDED",
+      ];
+      if (!validStates.includes(values[4])) {
+        return {
+          isValid: false,
+          errorReason: `Invalid STATE: ${values[4]}`
+        };
+      }
+
+      // 필수 필드 검증
+      if (!values[0] || !values[1]) {
+        return {
+          isValid: false,
+          errorReason: "Missing TEAM_ID or MISSION_TIME"
+        };
+      }
+
+      // 시간 형식 검증
+      const timeRegex = /^([0-1][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$/;
+      if (!timeRegex.test(values[1])) {
+        return {
+          isValid: false,
+          errorReason: `Invalid MISSION_TIME format: ${values[1]}`
+        };
+      }
+
+      // 모든 검증 통과 시 파싱된 데이터 반환
+      const parsedData: TelemetryData = {
+        TEAM_ID: values[0],
+        MISSION_TIME: values[1],
+        PACKET_COUNT: values[2],
+        MODE: values[3] as "F" | "S",
+        STATE: values[4] as TelemetryData["STATE"],
+        ALTITUDE: values[5],
+        TEMPERATURE: values[6],
+        PRESSURE: values[7],
+        VOLTAGE: values[8],
+        GYRO_R: values[9],
+        GYRO_P: values[10],
+        GYRO_Y: values[11],
+        ACCEL_R: values[12],
+        ACCEL_P: values[13],
+        ACCEL_Y: values[14],
+        MAG_R: values[15],
+        MAG_P: values[16],
+        MAG_Y: values[17],
+        AUTO_GYRO_ROTATION_RATE: values[18],
+        GPS_TIME: values[19],
+        GPS_ALTITUDE: values[20],
+        GPS_LATITUDE: convertGPSCoordinate(values[21], false),
+        GPS_LONGITUDE: convertGPSCoordinate(values[22], true),
+        GPS_SATS: values[23],
+        CMD_ECHO: values[24],
+      };
+
+      return {
+        isValid: true,
+        parsedData
+      };
+
+    } catch (error) {
+      return {
+        isValid: false,
+        errorReason: `Parse error: ${error instanceof Error ? error.message : 'Unknown error'}`
+      };
+    }
   };
 
   const handleSerialError = (_event: any, error: string) => {
@@ -56,90 +153,35 @@ export const useSerial = () => {
     setSelectedPort("");
   };
 
-  // telemetryData는 파라미터로 받아서 처리
+  // 수정된 handleSerialData - 모든 메시지를 처리하되 유효성에 따라 다르게 처리
   const handleSerialData =
     (telemetryData: TelemetryData[], setTelemetryData: Function) =>
     (_event: any, data: string) => {
-      try {
-        // 캐리지 리턴 제거 및 데이터 분리
-        const values = data
-          .trim()
-          .split(",")
-          .map((value) => value.trim());
+      // 유효성 검사 수행
+      const validationResult = validateTelemetryData(data);
 
-        // 데이터 검증을 위한 기본 체크 - 25개 필드로 수정
-        if (values.length < 25) {
-          console.warn("Insufficient number of fields in telemetry data");
-          console.log(`Expected 25 fields, but got ${values.length}`);
-          console.log("Raw data:", data);
-          return;
-        }
-
-        if (values[3] !== "F" && values[3] !== "S") {
-          console.warn(`Invalid MODE value: ${values[3]}`);
-          return;
-        }
-
-        const validStates = [
-          "LAUNCH_WAIT",
-          "LAUNCH_PAD",
-          "ASCENT",
-          "APOGEE",
-          "DESCENT",
-          "PROBE_RELEASE",
-          "LANDED",
-        ];
-        if (!validStates.includes(values[4])) {
-          console.warn(`Invalid STATE value: ${values[4]}`);
-          return;
-        }
-
-        const parsedData: TelemetryData = {
-          TEAM_ID: values[0],
-          MISSION_TIME: values[1],
-          PACKET_COUNT: values[2],
-          MODE: values[3] as "F" | "S",
-          STATE: values[4] as TelemetryData["STATE"],
-          ALTITUDE: values[5],
-          TEMPERATURE: values[6],
-          PRESSURE: values[7],
-          VOLTAGE: values[8],
-          GYRO_R: values[9],
-          GYRO_P: values[10],
-          GYRO_Y: values[11],
-          ACCEL_R: values[12],
-          ACCEL_P: values[13],
-          ACCEL_Y: values[14],
-          MAG_R: values[15],
-          MAG_P: values[16],
-          MAG_Y: values[17],
-          AUTO_GYRO_ROTATION_RATE: values[18], // 수정: 실제 데이터에서 가져오기
-          GPS_TIME: values[19], // 수정: 19번 인덱스로 변경
-          GPS_ALTITUDE: values[20], // 수정: 20번 인덱스로 변경
-          GPS_LATITUDE: convertGPSCoordinate(values[21], false), // GPS 위도 변환 (도분 → 십진도)
-          GPS_LONGITUDE: convertGPSCoordinate(values[22], true), // GPS 경도 변환 (도분 → 십진도)
-          GPS_SATS: values[23], // 수정: 23번 인덱스로 변경
-          CMD_ECHO: values[24], // 수정: 24번 인덱스로 변경
-        };
-
-        if (!parsedData.TEAM_ID || !parsedData.MISSION_TIME) {
-          console.warn("Missing required fields (TEAM_ID or MISSION_TIME)");
-          return;
-        }
-
-        const timeRegex = /^([0-1][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$/;
-        if (!timeRegex.test(parsedData.MISSION_TIME)) {
-          console.warn(
-            `Invalid MISSION_TIME format: ${parsedData.MISSION_TIME}`
-          );
-          return;
-        }
-
-        setTelemetryData((prev) => [...prev, parsedData]);
-      } catch (error) {
-        console.error("Failed to parse telemetry data:", error);
+      if (validationResult.isValid && validationResult.parsedData) {
+        // 유효한 데이터인 경우 텔레메트리 데이터에 추가
+        setTelemetryData((prev) => [...prev, validationResult.parsedData!]);
+        console.log("✅ Valid telemetry data processed");
+      } else {
+        // 유효하지 않은 데이터인 경우 로깅
+        console.warn("❌ Invalid telemetry data:", validationResult.errorReason);
         console.log("Raw data:", data);
       }
+
+      // MessageContext에서 처리할 수 있도록 유효성 정보와 함께 이벤트 발송
+      // 기존 serial-data 이벤트는 그대로 유지하되, 추가 정보 포함
+      const messageData = {
+        rawData: data,
+        isValid: validationResult.isValid,
+        errorReason: validationResult.errorReason
+      };
+
+      // 커스텀 이벤트로 메시지 컨텍스트에 전달
+      window.dispatchEvent(new CustomEvent('telemetry-message', { 
+        detail: messageData 
+      }));
     };
 
   return {
